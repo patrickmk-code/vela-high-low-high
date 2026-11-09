@@ -1,5 +1,5 @@
 // POST /api/patterns – erkennt Kraftquellen, Energieräuber und kleine Impulse aus den eigenen Abenden.
-import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
+import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { MODEL, VELA_VOICE, client, errorResponse, json, readBody } from './_shared.js';
 
@@ -17,14 +17,11 @@ const PatternsSchema = z.object({
   ideas: z.array(z.string()).describe('2-3 impulsos pequeños y concretos, como pregunta suave, basados en lo anterior'),
 });
 
-interface Body {
-  entries?: string[];
-}
-
 export async function POST(request: Request): Promise<Response> {
-  const body = await readBody<Body>(request, 60000);
+  const body = await readBody(request, 80000, 6);
   if (body instanceof Response) return body;
-  const entries = (body.entries || []).filter((e) => typeof e === 'string').slice(-60).map((e) => e.slice(0, 900));
+  const raw = Array.isArray(body.entries) ? body.entries : [];
+  const entries = raw.filter((e): e is string => typeof e === 'string').slice(-60).map((e) => e.slice(0, 900));
   if (entries.length < 3) return json({ error: 'pocos-datos' }, 400);
 
   const anthropic = client();
@@ -36,7 +33,7 @@ export async function POST(request: Request): Promise<Response> {
       max_tokens: 16000,
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      output_config: { effort: 'medium', format: zodOutputFormat(PatternsSchema) },
+      output_config: { effort: 'medium', format: betaZodOutputFormat(PatternsSchema) },
       system: `${VELA_VOICE}
 
 Tu tarea ahora: leer las noches registradas de una persona y descubrir con cuidado qué se repite. Solo lo que de verdad aparece varias veces. Usa «a menudo» o «a veces», nunca porcentajes ni números. No diagnostiques. Escribe todo en español.`,

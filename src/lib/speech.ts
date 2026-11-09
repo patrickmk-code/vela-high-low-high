@@ -60,7 +60,10 @@ export class VoiceCapture {
     // 1) Tonaufnahme
     if (recordSupported()) {
       try {
-        this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+        // Während der Freigabe-Abfrage abgebrochen? Dann Mikrofon sofort wieder freigeben.
+        if (!this.active) { stream.getTracks().forEach((t) => t.stop()); return false; }
+        this.stream = stream;
         const mime = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg'].find((m) => MediaRecorder.isTypeSupported?.(m));
         this.media = new MediaRecorder(this.stream, mime ? { mimeType: mime } : undefined);
         this.media.ondataavailable = (e) => { if (e.data && e.data.size) this.chunks.push(e.data); };
@@ -108,6 +111,7 @@ export class VoiceCapture {
       }
     }
 
+    if (!this.active) { this.cancel(); return false; }
     if (!micOk) { this.active = false; this.cb.onError?.('sin-micro'); return false; }
     this.limitTimer = window.setTimeout(() => this.onAutoStop?.(), MAX_SECONDS * 1000);
     return true;

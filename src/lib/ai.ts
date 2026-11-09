@@ -13,9 +13,16 @@ export function templateMirror(step: Step, text: string): string {
   let t = text.trim();
   if (!t) return 'Lo guardé tal como lo dijiste, con tu voz.';
   t = t.replace(/[.!?…\s]+$/, '');
-  if (t.length > 90) t = t.slice(0, 88) + ' …';
-  t = t.charAt(0).toLowerCase() + t.slice(1);
-  return MT[step].replace('{t}', t) + '.';
+  let cut = false;
+  if (t.length > 90) {
+    t = t.slice(0, 88).replace(/\s+\S*$/, '');
+    cut = true;
+  }
+  // Nur das erste Wort klein schreiben, wenn es kein Name/Eigenname ist (zweiter Buchstabe klein und nicht ganz am Satzanfang großgeschrieben)
+  const first = t.split(' ')[0];
+  const common = /^(El|La|Los|Las|Un|Una|Unos|Unas|Mi|Mis|Hoy|Que|Me|Lo|Al|Del|En|Con|Por|Para|Estar|Ir|Ver|Hablar|Tener|Hacer|Dormir|Salir|Tomar|Decir|Comer|Cenar|Leer)$/;
+  if (common.test(first)) t = t.charAt(0).toLowerCase() + t.slice(1);
+  return MT[step].replace('{t}', t) + (cut ? ' …' : '.');
 }
 
 async function postJSON<T>(url: string, body: unknown, timeoutMs: number): Promise<T | null> {

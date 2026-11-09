@@ -1,5 +1,5 @@
 // POST /api/mirror – Vela spiegelt einen Moment in einem kurzen Satz („Lo que escuché“).
-import { MODEL, VELA_VOICE, client, errorResponse, json, readBody } from './_shared.js';
+import { MODEL, VELA_VOICE, client, errorResponse, json, readBody, str } from './_shared.js';
 
 type Step = 'high1' | 'low' | 'ask' | 'high2';
 
@@ -10,26 +10,22 @@ const STEP_HINT: Record<Step, string> = {
   high2: 'La persona acaba de contar otro momento bonito o algo que le hace ilusión (segundo high). Ayuda a cerrar el día en un tono cálido.',
 };
 
-interface Body {
-  step?: Step;
-  text?: string;
-  context?: { high1?: string; low?: string };
-}
-
 export async function POST(request: Request): Promise<Response> {
-  const body = await readBody<Body>(request, 6000);
+  const body = await readBody(request, 8000, 40);
   if (body instanceof Response) return body;
-  const step = body.step;
-  const text = (body.text || '').trim().slice(0, 1500);
-  if (!step || !(step in STEP_HINT) || !text) return json({ error: 'entrada' }, 400);
+  const step = typeof body.step === 'string' && Object.hasOwn(STEP_HINT, body.step) ? (body.step as Step) : null;
+  const text = str(body.text, 1500);
+  if (!step || !text) return json({ error: 'entrada' }, 400);
 
   const anthropic = client();
   if (!anthropic) return json({ error: 'sin-clave' }, 503);
 
-  const ctx = body.context || {};
+  const ctx = body.context && typeof body.context === 'object' ? (body.context as Record<string, unknown>) : {};
+  const ctxHigh = str(ctx.high1, 300);
+  const ctxLow = str(ctx.low, 300);
   const contextLines = [
-    ctx.high1 ? `Antes contó como high: «${ctx.high1.slice(0, 300)}»` : '',
-    ctx.low ? `Antes contó como low: «${ctx.low.slice(0, 300)}»` : '',
+    ctxHigh ? `Antes contó como high: «${ctxHigh}»` : '',
+    ctxLow ? `Antes contó como low: «${ctxLow}»` : '',
   ].filter(Boolean).join('\n');
 
   try {

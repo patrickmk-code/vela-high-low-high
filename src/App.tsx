@@ -44,6 +44,7 @@ interface UI {
   liveText: string;
   breathing: boolean;
   relight: boolean;
+  ritualDate: string | null;
   answers: Record<InputPhase, Answer | null>;
   mirrorText: Partial<Record<InputPhase, string>>;
   mirrored: Record<InputPhase, boolean>;
@@ -79,7 +80,7 @@ function blankUI(d: AppData): UI {
   const t = todayKey();
   const td = parseKey(t);
   return {
-    phase: initialPhase(d), prog: 0, typing: false, rec: false, recSec: 0, liveText: '', breathing: false, relight: false,
+    phase: initialPhase(d), prog: 0, typing: false, rec: false, recSec: 0, liveText: '', breathing: false, relight: false, ritualDate: null,
     answers: { ...NO_ANSWERS }, mirrorText: {}, mirrored: { ...NO_MIRRORED }, reflecting: null, askHelp: false, notice: null,
     adding: null, draft: '', dayOpen: false,
     revTab: 'cal', selDay: t, calMonth: [td.getFullYear(), td.getMonth()], patView: null, patItem: null, patState: 'idle',
@@ -132,6 +133,9 @@ export default function App() {
   const voice = useRef<VoiceCapture | null>(null);
   const committed = useRef<Record<InputPhase, string | null>>({ ...NO_ANSWERS });
   const firstSave = useRef(true);
+  const starting = useRef(false);
+  const stepAt = useRef(0);
+  const [, setTick] = useState(0);
 
   const update = useCallback((p: Partial<UI> | ((s: UI) => Partial<UI>)) => {
     setSt((s) => ({ ...s, ...(typeof p === 'function' ? p(s) : p) }));
@@ -152,6 +156,10 @@ export default function App() {
   const breathSeconds = URL_BREATH ?? data.settings.breathSeconds;
   const today = todayKey();
   const todayEntry: DayEntry | undefined = data.days[today];
+  // Ein Abend gehört zu dem Tag, an dem die Kerze angezündet wurde (auch wenn er nach 4 Uhr endet).
+  const ritualDay = () => stRef.current.ritualDate ?? todayKey();
+  const dayKey = st.ritualDate ?? today;
+  const dayEntry: DayEntry | undefined = data.days[dayKey];
 
   const later = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); };
   const clearRecTimer = () => { if (recTimer.current != null) { clearInterval(recTimer.current); recTimer.current = null; } };
@@ -169,6 +177,7 @@ export default function App() {
   useEffect(() => () => clearAll(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const go = (ph: Phase) => {
+    stepAt.current = Date.now();
     cancelVoice();
     stopAudio();
     const typingDefault = isInputPhase(ph) && dataRef.current.settings.prefer === 'texto' && !stRef.current.mirrored[ph];
@@ -188,7 +197,7 @@ export default function App() {
     const id = committed.current[k] ?? uid();
     committed.current[k] = id;
     const m: Moment = { id, text: a.text, via: a.via, ...(a.audioId ? { audioId: a.audioId } : {}) };
-    updateDay(todayKey(), (e) => {
+    updateDay(ritualDay(), (e) => {
       const list = [...e[k]];
       const i = list.findIndex((x) => x.id === id);
       if (i >= 0) list[i] = m; else list.push(m);
@@ -200,9 +209,9 @@ export default function App() {
     const id = committed.current[k];
     if (!id) return;
     committed.current[k] = null;
-    const gone = dataRef.current.days[todayKey()]?.[k].find((x) => x.id === id);
+    const gone = dataRef.current.days[ritualDay()]?.[k].find((x) => x.id === id);
     if (gone?.audioId) deleteAudio(gone.audioId);
-    updateDay(todayKey(), (e) => {
+    updateDay(ritualDay(), (e) => {
       const mirrors = { ...e.mirrors };
       delete mirrors[k];
       return { ...e, [k]: e[k].filter((x) => x.id !== id), mirrors };
@@ -240,7 +249,7 @@ export default function App() {
         clearInterval(lightTimer.current!); lightTimer.current = null; holding.current = false;
         progRef.current = 1;
         committed.current = { ...NO_ANSWERS };
-        update({ prog: 1, phase: 'lit', answers: { ...NO_ANSWERS }, mirrorText: {}, mirrored: { ...NO_MIRRORED }, relight: false });
+        update({ prog: 1, phase: 'lit', answers: { ...NO_ANSWERS }, mirrorText: {}, mirrored: { ...NO_MIRRORED }, relight: false, ritualDate: todayKey() });
         vibrate(40);
         later(() => { progRef.current = 0; update({ prog: 0 }); go('high1'); }, 1700);
         return;
@@ -302,6 +311,7 @@ export default function App() {
   };
 
   const toggleRec = async () => {
+    if (starting.current) return; // Freigabe läuft noch – Tipps ignorieren
     const s = stRef.current;
     if (s.rec) { stopRecording(); return; }
     if (!isInputPhase(s.phase)) return;
@@ -314,11 +324,14 @@ export default function App() {
       () => { if (stRef.current.rec) stopRecording(); },
     );
     voice.current = capture;
+    starting.current = true;
     update({ rec: true, recSec: 0, typing: false, liveText: '', notice: null });
+    let ok = false;
+    try { ok = await capture.start(); } finally { starting.current = false; }
+    if (voice.current !== capture) { capture.cancel(); return; } // Schritt inzwischen verlassen
+    if (!ok) { voice.current = null; update({ rec: false }); return; }
     clearRecTimer();
     recTimer.current = window.setInterval(() => update((x) => ({ recSec: x.recSec + 1 })), 1000);
-    const ok = await capture.start();
-    if (!ok && voice.current === capture) { voice.current = null; clearRecTimer(); update({ rec: false }); }
   };
 
   const doneTyping = (text: string) => {
@@ -331,7 +344,7 @@ export default function App() {
   const commitAdd = () => {
     const s = stRef.current;
     const key = s.adding, t = s.draft.trim();
-    if (key && t) updateDay(todayKey(), (e) => ({ ...e, [key]: [...e[key], { id: uid(), text: t, via: 'texto' as Via }] }));
+    if (key && t) updateDay(ritualDay(), (e) => ({ ...e, [key]: [...e[key], { id: uid(), text: t, via: 'texto' as Via }] }));
     update({ adding: null, draft: '' });
   };
   const play = async (audioId: string) => {
@@ -343,17 +356,17 @@ export default function App() {
   const jump = (ph: Phase) => {
     clearAll();
     setSheetOpen(false);
-    update({ prog: 0, reflecting: null, breathing: false, relight: false });
+    update({ prog: 0, reflecting: null, breathing: false, relight: false, ritualDate: null });
     go(ph);
   };
   const reset = () => { clearAll(); committed.current = { ...NO_ANSWERS }; setSt(blankUI(dataRef.current)); };
   const blowOut = () => {
     go('sleep');
     vibrate([20, 60, 30]);
-    later(() => { update({ relight: false }); go('home'); }, 4200);
+    later(() => { update({ relight: false, ritualDate: null }); go('home'); }, 4200);
   };
   const finishDay = () => {
-    updateDay(todayKey(), (e) => ({ ...e, done: true }));
+    updateDay(ritualDay(), (e) => ({ ...e, done: true }));
     go(dataRef.current.settings.remindAsked ? 'now' : 'remind');
   };
   const exportData = () => {
@@ -368,6 +381,13 @@ export default function App() {
     setData(fresh);
     setSt(blankUI(fresh));
   };
+
+  // Uhr auf dem Sperrbildschirm aktuell halten
+  useEffect(() => {
+    if (st.phase !== 'lock') return;
+    const t = window.setInterval(() => setTick((n) => n + 1), 15000);
+    return () => clearInterval(t);
+  }, [st.phase]);
 
   // ---------- Muster laden ----------
   const doneCount = completedCount(data);
@@ -437,7 +457,8 @@ export default function App() {
       items: [...items, ...extra].filter((m) => momentLabel(m)),
     };
   });
-  const todaySections = sections(todayEntry);
+  const todaySections = sections(dayEntry);
+  const doneSections = sections(todayEntry);
   const itemCount = todaySections.reduce((n, s) => n + s.items.length, 0);
 
   const playBtn = (id: string, size = 30) => (
@@ -450,6 +471,9 @@ export default function App() {
       <Icon name={st.playing === id ? 'pause-bold' : 'play-bold'} size={Math.round(size * 0.42)} />
     </button>
   );
+
+  // Tipps kurz nach einem Schrittwechsel ignorieren (verhindert versehentliche Doppeltipps)
+  const guard = (fn: () => void) => () => { if (Date.now() - stepAt.current < 450) return; fn(); };
 
   // ---------- Erzähl-Screens ----------
   const renderInput = () => {
@@ -484,7 +508,7 @@ export default function App() {
                   type="button"
                   aria-label={st.rec ? 'Detener grabación' : 'Iniciar grabación'}
                   aria-pressed={st.rec}
-                  onClick={toggleRec}
+                  onClick={guard(toggleRec)}
                   style={sx(`position: relative; width: 92px; height: 92px; border-radius: 46px; border: 1.5px solid ${accent}; background: ${st.rec ? accent : coolBg ? 'rgba(159,180,200,0.12)' : 'rgba(242,180,90,0.12)'}; color: ${st.rec ? '#2B2430' : accent}; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .8s ease, color .8s ease`)}
                 >
                   {st.rec ? <span style={sx('width: 20px; height: 20px; border-radius: 5px; background: #2B2430')} /> : <Icon name="microphone-3-linear" size={32} />}
@@ -499,11 +523,11 @@ export default function App() {
                 </p>
               ) : (
                 <div style={sx('display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap')}>
-                  <button type="button" onClick={() => { cancelVoice(); update({ typing: true, notice: null }); }} style={sx(LINK_BTN)}>Prefiero escribir</button>
+                  <button type="button" onClick={guard(() => { cancelVoice(); update({ typing: true, notice: null }); })} style={sx(LINK_BTN)}>Prefiero escribir</button>
                   {inputPh === 'ask' && (
                     <>
                       <span aria-hidden="true" style={sx('color: rgba(205,191,174,0.5)')}>·</span>
-                      <button type="button" onClick={() => { cancelVoice(); update({ askHelp: true, typing: false, notice: null }); }} style={sx('min-height: 44px; padding: 0 12px; border: none; background: transparent; color: #CDBFAE; font-size: 15px; cursor: pointer')}>No lo sé</button>
+                      <button type="button" onClick={guard(() => { cancelVoice(); update({ askHelp: true, typing: false, notice: null }); })} style={sx('min-height: 44px; padding: 0 12px; border: none; background: transparent; color: #CDBFAE; font-size: 15px; cursor: pointer')}>No lo sé</button>
                     </>
                   )}
                 </div>
@@ -527,7 +551,7 @@ export default function App() {
               <button type="button" onClick={() => d.skipTo && go(d.skipTo)} style={sx(LINK_BTN + '; color: #CDBFAE; text-decoration-color: rgba(205,191,174,0.4)')}>Seguir sin respuesta</button>
             </>
           )}
-          {showTyping && <TypingBox key={inputPh} label={d.t} accent={accent} initial={answer?.via === 'texto' ? answer.text : ''} onDone={doneTyping} onSpeak={canVoice ? () => update({ typing: false, notice: null }) : undefined} />}
+          {showTyping && <TypingBox key={inputPh} label={d.t} accent={accent} initial={answer?.via === 'texto' ? answer.text : ''} onDone={doneTyping} onSpeak={canVoice ? () => update({ typing: false, notice: null }) : undefined} onDontKnow={inputPh === 'ask' ? () => update({ typing: false, askHelp: true }) : undefined} />}
           {refl && (
             <>
               <div aria-hidden="true" style={sx('height: 40px; display: flex; gap: 8px; align-items: center')}><span className="thinkdot" /><span className="thinkdot" /><span className="thinkdot" /></div>
@@ -536,7 +560,7 @@ export default function App() {
           )}
           {showMirror && (
             <>
-              <div style={sx(`width: 100%; padding: 18px 20px; border-radius: 22px; border: 1px solid ${coolBg ? 'rgba(159,180,200,0.32)' : 'rgba(242,180,90,0.32)'}; background: rgba(245,239,228,0.05); display: flex; flex-direction: column; gap: 8px`)}>
+              <div style={sx(`width: 100%; padding: 18px 20px; border-radius: 22px; border: 1px solid ${coolBg ? 'rgba(159,180,200,0.32)' : 'rgba(242,180,90,0.32)'}; background: rgba(52,44,58,0.9); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: flex; flex-direction: column; gap: 8px`)}>
                 <div style={sx('display: flex; justify-content: space-between; align-items: center; gap: 10px')}>
                   <p style={sx('margin: 0; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #CDBFAE')}>Lo que escuché</p>
                   {answer?.audioId && playBtn(answer.audioId, 28)}
@@ -549,7 +573,7 @@ export default function App() {
                   onClick={() => { stopAudio(); uncommit(inputPh); update((s) => ({ answers: { ...s.answers, [inputPh]: null }, mirrored: { ...s.mirrored, [inputPh]: false }, typing: dataRef.current.settings.prefer === 'texto', askHelp: false, playing: null })); }}
                   style={sx('min-height: 48px; padding: 0 14px; border: none; background: transparent; color: #E6DACB; font-size: 15px; cursor: pointer')}
                 >Repetir</button>
-                <button type="button" onClick={() => go(d.next)} style={sx(`height: 48px; min-width: 160px; padding: 0 32px; border-radius: 24px; border: 1px solid ${accent}; background: ${accent}; color: #2B2430; font-size: 15px; font-weight: 700; cursor: pointer`)}>Seguir</button>
+                <button type="button" onClick={guard(() => go(d.next))} style={sx(`height: 48px; min-width: 160px; padding: 0 32px; border-radius: 24px; border: 1px solid ${accent}; background: ${accent}; color: #2B2430; font-size: 15px; font-weight: 700; cursor: pointer`)}>Seguir</button>
               </div>
             </>
           )}
@@ -564,7 +588,7 @@ export default function App() {
       <div style={sx(`position: absolute; left: 24px; right: 24px; top: 96px; max-height: ${st.dayOpen ? Math.min(580, H - 220) : Math.min(300, H - 400)}px; overflow-y: auto; padding: 22px 22px 0 20px; border-radius: 26px; background: ${st.dayOpen ? 'rgba(47,40,52,0.97)' : 'linear-gradient(160deg, rgba(245,239,228,0.09) 0%, rgba(245,239,228,0.03) 100%)'}; transition: max-height .7s ease, background .7s ease; border: 1px solid rgba(245,239,228,0.1); box-shadow: 0 24px 50px -24px rgba(0,0,0,0.6); z-index: 1; -webkit-overflow-scrolling: touch`)}>
         <div style={sx('display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px')}>
           <h1 style={sx(H1 + '; font-size: 26px; line-height: 1')}>Tu día</h1>
-          <p style={sx('margin: 0; font-size: 12px; letter-spacing: 0.04em; color: #CDBFAE')}>{cap(longLabel(today))}</p>
+          <p style={sx('margin: 0; font-size: 12px; letter-spacing: 0.04em; color: #CDBFAE')}>{cap(longLabel(dayKey))}</p>
         </div>
         <div style={sx('position: relative; display: flex; flex-direction: column; gap: 18px; padding-left: 26px')}>
           <span aria-hidden="true" style={sx('position: absolute; left: 5px; top: 8px; bottom: 8px; width: 1px; background: linear-gradient(180deg, rgba(242,180,90,0.6), rgba(205,191,174,0.25) 50%, rgba(242,180,90,0.6))')} />
@@ -672,7 +696,7 @@ export default function App() {
     const ideas = patterns ? patterns.ideas.filter((t) => !data.ideas.hidden[t]) : [];
 
     return (
-      <div style={sx('position: absolute; left: 20px; right: 20px; top: 104px; bottom: 100px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; -webkit-overflow-scrolling: touch')}>
+      <div style={sx('position: absolute; left: 20px; right: 20px; top: 104px; bottom: 112px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; -webkit-overflow-scrolling: touch')}>
         <h1 style={sx(H1 + '; font-size: 30px')}>Resumen</h1>
         <div role="tablist" aria-label="Vista del resumen" style={sx('display: flex; padding: 4px; border-radius: 22px; background: rgba(245,239,228,0.06); flex-shrink: 0')}>
           {([['cal', 'Calendario'], ['pat', 'Patrones']] as const).map(([id, label]) => {
@@ -873,12 +897,13 @@ export default function App() {
     const yearMoment = yearAgo ? [...yearAgo.high1, ...yearAgo.high2].find((m) => momentLabel(m)) : undefined;
     const saveUpcoming = () => {
       const title = st.upTitle.trim();
-      if (!title || !st.upDate || st.upDate < today) return;
+      if (!title) { update({ toast: 'Escribe qué te hace ilusión.' }); return; }
+      if (!st.upDate || st.upDate < today) { update({ toast: 'Elige hoy o un día que aún esté por llegar.' }); return; }
       setData((d) => ({ ...d, upcoming: [...d.upcoming, { id: uid(), date: st.upDate, title }] }));
       update({ upOpen: false, upTitle: '', upDate: addDays(today, 1) });
     };
     return (
-      <div style={sx('position: absolute; left: 20px; right: 20px; top: 104px; bottom: 100px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; -webkit-overflow-scrolling: touch')}>
+      <div style={sx('position: absolute; left: 20px; right: 20px; top: 104px; bottom: 112px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; -webkit-overflow-scrolling: touch')}>
         <h1 style={sx(H1 + '; font-size: 30px')}>Tus highs</h1>
         <div style={sx('display: flex; justify-content: space-between; align-items: center; margin-top: 4px')}>
           <p style={sx('margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #F2B45A')}>Lo que viene</p>
@@ -948,7 +973,7 @@ export default function App() {
     );
     return (
       <>
-        <button type="button" aria-label="Volver" onClick={() => go('home')} style={sx('position: absolute; left: 24px; top: 54px; z-index: 2; ' + BACK_BTN)}><Icon name="alt-arrow-left-linear" size={20} /></button>
+        <button type="button" aria-label="Volver" onClick={() => go('home')} style={sx('position: absolute; left: 24px; top: 54px; z-index: 2; ' + BACK_BTN + '; background: #3A3240')}><Icon name="alt-arrow-left-linear" size={20} /></button>
         <div style={sx('position: absolute; left: 20px; right: 20px; top: 112px; bottom: 24px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; -webkit-overflow-scrolling: touch')}>
           <h1 style={sx(H1 + '; font-size: 30px')}>Ajustes</h1>
           {row('Recordatorio', (
@@ -1041,7 +1066,7 @@ export default function App() {
       <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
     </p>
   );
-  const doneLines = todaySections.filter((s) => s.items.length).map((s) => ({ ring: s.ring, text: momentLabel(s.items[0]) }));
+  const doneLines = doneSections.filter((s) => s.items.length).map((s) => ({ ring: s.ring, text: momentLabel(s.items[0]) }));
   const now = new Date();
 
   // ---------- Bühne (Telefon) ----------
@@ -1288,7 +1313,7 @@ export default function App() {
       )}
 
       {st.toast && (
-        <div role="status" style={sx('position: absolute; left: 20px; right: 20px; top: 12px; z-index: 8; padding: 12px 16px; border-radius: 16px; background: rgba(58,49,64,0.97); border: 1px solid rgba(245,239,228,0.12); color: #F5EFE4; font-size: 14px; line-height: 1.45; text-align: center; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.6)')}>{st.toast}</div>
+        <div role="status" style={sx('position: absolute; left: 20px; right: 20px; top: 104px; z-index: 8; padding: 12px 16px; border-radius: 16px; background: rgba(58,49,64,0.97); border: 1px solid rgba(245,239,228,0.12); color: #F5EFE4; font-size: 14px; line-height: 1.45; text-align: center; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.6)')}>{st.toast}</div>
       )}
 
       {TEST && ph !== 'intro' && (
@@ -1340,7 +1365,7 @@ export default function App() {
 }
 
 // Eigenes Eingabefeld, damit Tippen nicht die ganze App neu rendert.
-function TypingBox({ label, accent, initial, onDone, onSpeak }: { label: string; accent: string; initial: string; onDone: (t: string) => void; onSpeak?: () => void }) {
+function TypingBox({ label, accent, initial, onDone, onSpeak, onDontKnow }: { label: string; accent: string; initial: string; onDone: (t: string) => void; onSpeak?: () => void; onDontKnow?: () => void }) {
   const [text, setText] = useState(initial);
   const has = !!text.trim();
   return (
@@ -1351,10 +1376,16 @@ function TypingBox({ label, accent, initial, onDone, onSpeak }: { label: string;
         value={text}
         autoFocus
         onChange={(e) => setText(e.target.value)}
-        style={sx("width: 100%; height: 100px; padding: 16px 18px; border-radius: 20px; border: 1px solid rgba(245,239,228,0.16); background: rgba(245,239,228,0.05); color: #F5EFE4; font-family: 'Nunito Sans', sans-serif; font-size: 16px; line-height: 1.55; resize: none")}
+        style={sx("width: 100%; height: 100px; padding: 16px 18px; border-radius: 20px; border: 1px solid rgba(245,239,228,0.16); background: rgba(52,44,58,0.9); color: #F5EFE4; font-family: 'Nunito Sans', sans-serif; font-size: 16px; line-height: 1.55; resize: none")}
       />
       <button type="button" onClick={() => onDone(text)} disabled={!has} style={sx(`height: 48px; min-width: 180px; padding: 0 32px; border-radius: 24px; border: 1px solid ${has ? accent : 'rgba(245,239,228,0.25)'}; background: ${has ? accent : 'transparent'}; color: ${has ? '#2B2430' : '#F5EFE4'}; font-size: 15px; font-weight: 700; cursor: pointer; transition: background .8s ease, color .8s ease, border-color .8s ease`)}>Listo</button>
-      {onSpeak && <button type="button" onClick={onSpeak} style={sx(LINK_BTN)}>Prefiero hablar</button>}
+      {(onSpeak || onDontKnow) && (
+        <div style={sx('display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap')}>
+          {onSpeak && <button type="button" onClick={onSpeak} style={sx(LINK_BTN)}>Prefiero hablar</button>}
+          {onSpeak && onDontKnow && <span aria-hidden="true" style={sx('color: rgba(205,191,174,0.5)')}>·</span>}
+          {onDontKnow && <button type="button" onClick={onDontKnow} style={sx('min-height: 44px; padding: 0 12px; border: none; background: transparent; color: #CDBFAE; font-size: 15px; cursor: pointer')}>No lo sé</button>}
+        </div>
+      )}
     </>
   );
 }

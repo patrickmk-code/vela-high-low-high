@@ -16,25 +16,46 @@ export function json(data: unknown, status = 200): Response {
   });
 }
 
-/** Einfacher Schutz: nur Aufrufe von der eigenen Seite, nur JSON, begrenzte Größe. */
-export async function readBody<T>(request: Request, maxBytes: number): Promise<T | Response> {
+// Einfache Begrenzung pro IP (pro Server-Instanz, best effort): schützt den Schlüssel vor Dauerbeschuss.
+const hits = new Map<string, number[]>();
+function limited(request: Request, perMinute: number): boolean {
+  const ip = (request.headers.get('x-forwarded-for') || 'local').split(',')[0].trim();
+  const now = Date.now();
+  const list = (hits.get(ip) || []).filter((t) => now - t < 60_000);
+  list.push(now);
+  hits.set(ip, list);
+  if (hits.size > 5000) hits.clear();
+  return list.length > perMinute;
+}
+
+export type JsonObject = Record<string, unknown>;
+
+/** Schutz: nur Aufrufe von der eigenen Seite, nur JSON-Objekte, begrenzte Größe, Ratenbegrenzung. */
+export async function readBody(request: Request, maxBytes: number, perMinute: number): Promise<JsonObject | Response> {
   const origin = request.headers.get('origin');
   const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
-  if (origin && host) {
-    try {
-      if (new URL(origin).host !== host) return json({ error: 'origen' }, 403);
-    } catch {
-      return json({ error: 'origen' }, 403);
-    }
-  }
-  const text = await request.text();
-  if (text.length > maxBytes) return json({ error: 'demasiado-largo' }, 413);
+  if (!origin || !host) return json({ error: 'origen' }, 403);
   try {
-    return JSON.parse(text) as T;
+    if (new URL(origin).host !== host) return json({ error: 'origen' }, 403);
+  } catch {
+    return json({ error: 'origen' }, 403);
+  }
+  if (limited(request, perMinute)) return json({ error: 'limite' }, 429);
+  const declared = Number(request.headers.get('content-length') || 0);
+  if (declared > maxBytes) return json({ error: 'demasiado-largo' }, 413);
+  const buf = await request.arrayBuffer();
+  if (buf.byteLength > maxBytes) return json({ error: 'demasiado-largo' }, 413);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(new TextDecoder().decode(buf));
   } catch {
     return json({ error: 'json' }, 400);
   }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return json({ error: 'entrada' }, 400);
+  return parsed as JsonObject;
 }
+
+export const str = (v: unknown, max: number): string => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
 export function client(): Anthropic | null {
   if (!process.env.ANTHROPIC_API_KEY) return null;
@@ -45,5 +66,6 @@ export function errorResponse(err: unknown): Response {
   if (err instanceof Anthropic.RateLimitError) return json({ error: 'limite' }, 429);
   if (err instanceof Anthropic.AuthenticationError) return json({ error: 'clave' }, 503);
   if (err instanceof Anthropic.APIError) return json({ error: 'api', status: err.status }, 502);
+  if (err instanceof Anthropic.AnthropicError) return json({ error: 'respuesta' }, 502);
   return json({ error: 'interno' }, 500);
 }
