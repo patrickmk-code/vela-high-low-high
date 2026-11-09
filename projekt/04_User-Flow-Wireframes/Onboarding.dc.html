@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Vela – Einstieg Wireframe</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#44403C}a:hover{color:#1C1917}
+.col{display:flex;flex-direction:column;gap:10px;width:240px}
+.lbl{margin:0;font-size:13px;font-weight:600;color:#1C1917}
+.num{color:#78716C;font-weight:500;margin-right:6px}
+.scr{width:240px;height:500px;box-sizing:border-box;border:1.5px solid #A8A29E;border-radius:28px;background:#FFFFFF;display:flex;flex-direction:column;padding:18px 16px;gap:10px}
+.ann{margin:0;font-size:12px;line-height:1.45;color:#57534E}
+.h{margin:0;font-size:17px;line-height:1.3;font-weight:600;color:#1C1917;text-align:center}
+.s{margin:0;font-size:12px;line-height:1.4;color:#57534E;text-align:center}
+.mid{flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.btn{height:40px;border-radius:20px;background:#44403C;color:#FAFAF9;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.lnk{font-size:11px;color:#44403C;text-decoration:underline;text-align:center}
+.candle{display:flex;flex-direction:column;align-items:center}
+.flame{border:1.5px solid #57534E;border-radius:50% 50% 50% 50% / 62% 62% 38% 38%;box-sizing:border-box}
+.wick{width:2px;height:8px;background:#57534E}
+.cbody{width:40px;height:60px;border:1.5px solid #57534E;border-radius:6px 6px 4px 4px;box-sizing:border-box}
+</style>
+</helmet>
+<div style="width: 320px; height: 720px; box-sizing: border-box; padding: 40px; background: #F5F5F4; font-family: 'Inter', sans-serif; display: flex; align-items: flex-start">
+
+  <div class="col">
+    <p class="lbl"><span class="num">1.1</span>Die Idee</p>
+    <div class="scr">
+      <div style="height: 24px"></div>
+      <div class="mid">
+        <div class="candle"><div class="flame" style="width: 22px; height: 32px"></div><div class="wick"></div><div class="cbody"></div></div>
+        <p class="h">Hallo, ich bin Vela.</p>
+        <p class="s">Jeden Abend drei Momente: etwas Gutes, etwas Schweres und wieder etwas Gutes. Mehr braucht es nicht.</p>
+        <div style="display: flex; gap: 10px; align-items: flex-end; height: 40px">
+          <div style="width: 14px; height: 36px; border-radius: 7px; background: #44403C"></div>
+          <div style="width: 14px; height: 18px; border-radius: 7px; background: #A8A29E"></div>
+          <div style="width: 14px; height: 36px; border-radius: 7px; background: #44403C"></div>
+        </div>
+      </div>
+      <div class="btn">Zünde dein erstes Licht an</div>
+      <span class="lnk">Deine Momente gehören nur dir</span>
+    </div>
+    <p class="ann">Einziger Einstiegsscreen. Danach direkt ins erste High Low High (2.2 Docht halten und einatmen). Keine Einstellungen vorab.</p>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":320,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

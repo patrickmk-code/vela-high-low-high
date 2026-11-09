@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Vela – Abendritual Wireframe</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#44403C}a:hover{color:#1C1917}
+.col{display:flex;flex-direction:column;gap:10px;width:240px}
+.lbl{margin:0;font-size:13px;font-weight:600;color:#1C1917}
+.num{color:#78716C;font-weight:500;margin-right:6px}
+.scr{width:240px;height:500px;box-sizing:border-box;border:1.5px solid #A8A29E;border-radius:28px;background:#FFFFFF;display:flex;flex-direction:column;padding:18px 16px;gap:10px}
+.dash{border-style:dashed;background:#FAFAF9}
+.ann{margin:0;font-size:12px;line-height:1.45;color:#57534E}
+.bar{display:flex;justify-content:space-between;align-items:center;height:24px}
+.ic{width:24px;height:24px;border-radius:12px;background:#E7E5E4}
+.dots{display:flex;gap:5px;align-items:center}
+.d{width:6px;height:6px;border-radius:3px;background:#D6D3D1}
+.don{width:16px;height:6px;border-radius:3px;background:#57534E}
+.eb{margin:0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#78716C;text-align:center}
+.h{margin:0;font-size:17px;line-height:1.3;font-weight:600;color:#1C1917;text-align:center}
+.s{margin:0;font-size:12px;line-height:1.4;color:#57534E;text-align:center}
+.mid{flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.btn{height:40px;border-radius:20px;background:#44403C;color:#FAFAF9;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.btn2{height:40px;border-radius:20px;border:1.5px solid #A8A29E;color:#44403C;font-size:13px;display:flex;align-items:center;justify-content:center}
+.lnk{font-size:12px;color:#44403C;text-decoration:underline}
+.row2{display:flex;justify-content:space-between}
+.mic{width:56px;height:56px;border-radius:28px;border:1.5px solid #57534E;display:flex;align-items:center;justify-content:center;color:#57534E}
+.candle{display:flex;flex-direction:column;align-items:center}
+.flame{border:1.5px solid #57534E;border-radius:50% 50% 50% 50% / 62% 62% 38% 38%;box-sizing:border-box}
+.wick{width:2px;height:8px;background:#57534E}
+.cbody{width:40px;height:60px;border:1.5px solid #57534E;border-radius:6px 6px 4px 4px;box-sizing:border-box}
+.ph{background:#E7E5E4;border-radius:10px}
+.line{height:8px;border-radius:4px;background:#E7E5E4}
+.nav{display:flex;justify-content:space-around;border-top:1px solid #E7E5E4;padding-top:10px}
+.nv{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:#57534E}
+.nvi{width:16px;height:16px;border-radius:8px;background:#D6D3D1}
+.nvon{width:16px;height:16px;border-radius:8px;background:#44403C}
+.arrow{width:56px;display:flex;justify-content:center;padding-top:268px}
+.item{display:flex;gap:8px;align-items:flex-start;font-size:12px;line-height:1.4;color:#1C1917}
+.bul{width:8px;height:8px;border-radius:4px;margin-top:4px;flex-shrink:0}
+.ringwrap{position:relative;width:130px;height:130px;display:flex;align-items:center;justify-content:center}
+.ringsvg{position:absolute;left:0;top:0}
+.finger{position:absolute;left:53px;top:14px;width:24px;height:24px;border-radius:12px;background:rgba(68,64,60,0.18);border:1.5px solid #44403C;box-sizing:border-box}
+.hint{align-self:center;font-size:11px;padding:5px 12px;border-radius:12px;background:#F5F5F4;color:#44403C}
+</style>
+</helmet>
+<div style="width: 3280px; height: 720px; box-sizing: border-box; padding: 40px; background: #F5F5F4; font-family: 'Inter', sans-serif; display: flex; align-items: flex-start">
+
+  <div class="col">
+    <p class="lbl"><span class="num">2.1</span>Heute · Kerze ist aus</p>
+    <div class="scr">
+      <div class="bar"><span style="font-size: 11px; color: #57534E">Mo, 9. November</span><span class="ic"></span></div>
+      <div class="mid">
+        <div class="ringwrap">
+          <svg class="ringsvg" aria-hidden="true" width="130" height="130" viewBox="0 0 130 130"><circle cx="65" cy="65" r="58" stroke="#D6D3D1" stroke-width="1.5" fill="none" stroke-dasharray="4 5"></circle></svg>
+          <div class="candle" style="margin-top: 14px"><div class="wick" style="height: 12px"></div><div class="cbody"></div></div>
+        </div>
+        <p class="h">Ich bin da, wenn du so weit bist.</p>
+      </div>
+      <span class="hint">Docht gedrückt halten</span>
+      <div class="nav"><div class="nv"><div class="nvon"></div>Heute</div><div class="nv"><div class="nvi"></div>Rückblick</div><div class="nv"><div class="nvi"></div>Highs</div></div>
+    </div>
+    <p class="ann">Ab dem zweiten Abend Einstieg über die sanfte Erinnerung oder den App-Start. Kein Button: Die Kerze selbst ist die Interaktion. Beim ersten Mal geht es von 1.1 direkt zu 2.2.</p>
+  </div>
+
+  <div class="arrow"><svg aria-hidden="true" width="40" height="12" viewBox="0 0 40 12"><path d="M0 6h36M30 1l6 5-6 5" stroke="#78716C" stroke-width="1.5" fill="none"></path></svg></div>
+
+  <div class="col">
+    <p class="lbl"><span class="num">2.2</span>Docht halten · einatmen</p>
+    <div class="scr">
+      <div class="bar"><span></span><span></span></div>
+      <div class="mid">
+        <div class="ringwrap">
+          <svg class="ringsvg" aria-hidden="true" width="130" height="130" viewBox="0 0 130 130"><circle cx="65" cy="65" r="58" stroke="#E7E5E4" stroke-width="3" fill="none"></circle><circle cx="65" cy="65" r="58" stroke="#44403C" stroke-width="3" fill="none" stroke-dasharray="364" stroke-dashoffset="182" stroke-linecap="round" transform="rotate(-90 65 65)"></circle></svg>
+          <span class="finger"></span>
+          <div class="candle" style="margin-top: 14px"><div class="wick" style="height: 12px"></div><div class="cbody"></div></div>
+        </div>
+        <p class="h">Atme mit mir ein.</p>
+        <p class="s">Bleib mit dem Finger auf dem Docht.</p>
+      </div>
+    </div>
+    <p class="ann">Finger bleibt auf dem Docht. Der Ring füllt sich mit dem Einatmen (ca. 4 Sek.), der Docht beginnt zu glimmen. Haptik: weicher, ansteigender Puls. Früh losgelassen: Ring zieht sich sanft zurück, keine Fehlermeldung.</p>
+  </div>
+
+  <div class="arrow"><svg aria-hidden="true" width="40" height="12" viewBox="0 0 40 12"><path d="M0 6h36M30 1l6 5-6 5" stroke="#78716C" stroke-width="1.5" fill="none"></path></svg></div>
+
+  <div class="col">
+    <p class="lbl"><span class="num">2.3</span>Ausatmen · Kerze geht an</p>
+    <div class="scr">
+      <div class="bar"><span></span><span></span></div>
+      <div class="mid">
+        <div class="ringwrap">
+          <svg class="ringsvg" aria-hidden="true" width="130" height="130" viewBox="0 0 130 130"><circle cx="65" cy="65" r="58" stroke="#E7E5E4" stroke-width="3" fill="none"></circle><circle cx="65" cy="65" r="58" stroke="#44403C" stroke-width="3" fill="none" stroke-dasharray="364" stroke-dashoffset="30" stroke-linecap="round" transform="rotate(-90 65 65)"></circle></svg>
+          <span class="finger" style="top: 0px"></span>
+          <div class="candle" style="margin-top: 0px"><div class="flame" style="width: 16px; height: 24px; border-style: dashed"></div><div class="wick"></div><div class="cbody"></div></div>
+        </div>
+        <p class="h">Und langsam wieder aus.</p>
+        <p class="s">Dein Licht ist an.</p>
+      </div>
+    </div>
+    <p class="ann">Mit dem Ausatmen (ca. 4 Sek.) fängt der Docht Feuer, die Flamme wächst und das Licht im Raum wird wärmer. Danach geht es ohne Tippen direkt weiter zum ersten High.</p>
+  </div>
+
+  <div class="arrow"><svg aria-hidden="true" width="40" height="12" viewBox="0 0 40 12"><path d="M0 6h36M30 1l6 5-6 5" stroke="#78716C" stroke-width="1.5" fill="none"></path></svg></div>
+
+  <div class="col">
+    <p class="lbl"><span class="num">2.4</span>Erstes High</p>
+    <div class="scr">
+      <div class="bar"><span class="ic"></span><div class="dots"><span class="don"></span><span class="d"></span><span class="d"></span></div><span style="width: 24px"></span></div>
+      <p class="eb">High</p>
+      <p class="h">Was war heute ein guter Moment?</p>
+      <p class="s">Er darf auch ganz klein sein.</p>
+      <div class="mid">
+        <div class="candle"><div class="flame" style="width: 24px; height: 36px"></div><div class="wick"></div><div class="cbody"></div></div>
+        <div class="mic"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></div>
+      </div>
+      <div class="row2"><span class="lnk">Lieber tippen</span><span class="lnk">Weiter</span></div>
+    </div>
+    <p class="ann">Kein eigener Begrüßungsscreen: Das Ritual beginnt, sobald die Kerze brennt. Sprechen ist voreingestellt, Tippen jederzeit möglich. Die Flamme wird größer und goldener.</p>
+  </div>
+
+  <div class="arrow"><svg aria-hidden="true" width="40" height="12" viewBox="0 0 40 12"><path d="M0 6h36M30 1l6 5-6 5" stroke="#78716C" stroke-width="1.5" fill="none"></path></svg></div>
+
+  <div class="col">
+    <p class="lbl"><span class="num">2.5</span>Low</p>
+    <div class="scr">
+      <div class="bar"><span class="ic"></span><div class="dots"><span class="d"></span><span class="don"></span><span class="d"></span></div><span style="width: 24px"></span></div>
+      <p class="eb">Low</p>
+      <p class="h">Und was war heute schwer?</p>
+      <p class="s">Du kannst es einfach hier ablegen.</p>
+      <div class="mid">
+        <div class="candle"><div class="flame" style="width: 14px; height: 20px"></div><div class="wick"></div><div class="cbody"></div></div>
+        <div class="mic"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></div>
+      </div>
+      <div class="row2"><span class="lnk">Lieber tippen</span><span class="lnk">Heute auslassen</span></div>
+    </div>
+    <p class="ann">Die Flamme wird kleiner, ruhiger und leicht bläulich, geht aber nie aus. Das Low darf übersprungen werden.</p>
+  </div>
+
+  <div class="arrow"><svg aria-hidden="true" width="40" height="12" viewBox="0 0 40 12"><path d="M0 6h36M30 1l6 5-6 5" stroke="#78716C" stroke-width="1.5" fill="none"></path></svg></div>
+
+  <div class="col">
+    <p class="lbl"><span class="num">2.6</span>Nachfrage · optional</p>
+    <div class="scr dash">
+      <div class="bar"><span class="ic"></span><div class="dots"><span class="d"></span><span class="don"></span><span class="d"></span></div><span style="width: 24px"></span></div>
+      <div class="mid">
+        <div class="candle"><div class="flame" style="width: 14px; height: 20px"></div><div class="wick"></div><div class="cbody"></div></div>
+        <p class="h">Das klingt anstrengend.</p>
+        <p class="s">Was hätte dir in dem Moment gutgetan?</p>
+        <div class="mic"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></div>
+      </div>
+      <div class="row2"><span class="lnk">Überspringen</span><span class="lnk">Weiter</span></div>
+    </div>
+    <p class="ann">Eine einzige behutsame Frage, bezogen auf das Gesagte. Jederzeit überspringbar. Die Antworten fließen später in 4.5 ein.</p>
+  </div>
+
+  <div class="arrow"><svg aria-hidden="true" width="40" height="12" viewBox="0 0 40 12"><path d="M0 6h36M30 1l6 5-6 5" stroke="#78716C" stroke-width="1.5" fill="none"></path></svg></div>
+
+  <div class="col">
+    <p class="lbl"><span class="num">2.7</span>Trost · nur bei schwerem Low</p>
+    <div class="scr dash">
+      <div class="bar"><span class="ic"></span><div class="dots"><span class="d"></span><span class="don"></span><span class="d"></span></div><span style="width: 24px"></span></div>
+      <div class="mid">
+        <p class="h">Heute war viel.</p>
+        <p class="s">Erinnerst du dich an das hier?</p>
+        <div class="ph" style="width: 100%; box-sizing: border-box; padding: 14px; display: flex; gap: 12px; align-items: center">
+          <div style="width: 36px; height: 36px; border-radius: 18px; border: 1.5px solid #57534E; flex-shrink: 0; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12"><path d="M3 1.5v9l7.5-4.5z" fill="#57534E"></path></svg></div>
+          <div style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1"><span style="font-size: 10px; color: #57534E">High vom 12. Oktober</span><div class="line" style="background: #D6D3D1"></div><div class="line" style="width: 70%; background: #D6D3D1"></div></div>
+        </div>
+        <p class="s">Das war auch dein Leben.</p>
+      </div>
+      <div class="btn2">Weiter</div>
+    </div>
+    <p class="ann">Spielt ein früheres High in der eigenen Stimme ab. Erscheint nur, wenn das Low besonders schwer klang.</p>
+  </div>
+
+  <div class="arrow"><svg aria-hidden="true" width="40" height="12" viewBox="0 0 40 12"><path d="M0 6h36M30 1l6 5-6 5" stroke="#78716C" stroke-width="1.5" fill="none"></path></svg></div>
+
+  <div class="col">
+    <p class="lbl"><span class="num">2.8</span>Zweites High</p>
+    <div class="scr">
+      <div class="bar"><span class="ic"></span><div class="dots"><span class="d"></span><span class="d"></span><span class="don"></span></div><span style="width: 24px"></span></div>
+      <p class="eb">High</p>
+      <p class="h">Lass uns mit etwas Schönem enden.</p>
+      <p class="s">Was war heute noch schön? Oder worauf freust du dich?</p>
+      <div class="mid">
+        <div class="candle"><div class="flame" style="width: 24px; height: 36px"></div><div class="wick"></div><div class="cbody"></div></div>
+        <div class="mic"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></div>
+      </div>
+      <div class="row2"><span class="lnk">Lieber tippen</span><span class="lnk">Weiter</span></div>
+    </div>
+    <p class="ann">Ein weiteres High des Tages und/oder etwas, worauf man sich freut. Beides ist möglich. Die Flamme richtet sich wieder auf und wird warm. Positives Ende nach der Peak-End-Regel.</p>
+  </div>
+
+  <div class="arrow"><svg aria-hidden="true" width="40" height="12" viewBox="0 0 40 12"><path d="M0 6h36M30 1l6 5-6 5" stroke="#78716C" stroke-width="1.5" fill="none"></path></svg></div>
+
+  <div class="col">
+    <p class="lbl"><span class="num">2.9</span>Spiegel &amp; Abschluss</p>
+    <div class="scr">
+      <div class="bar"><span></span><span></span></div>
+      <div class="candle"><div class="flame" style="width: 20px; height: 30px"></div><div class="wick"></div><div class="cbody"></div></div>
+      <p class="h">Dein Tag</p>
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 4px 6px">
+        <div class="item"><span class="bul" style="background: #44403C"></span>Ein Spaziergang in der Sonne</div>
+        <div class="item"><span class="bul" style="background: #A8A29E"></span>Ein zähes Meeting</div>
+        <div class="item"><span class="bul" style="background: #44403C"></span>Vorfreude auf Freitag</div>
+      </div>
+      <div style="flex-grow: 1"></div>
+      <div class="btn2">Kurz durchatmen · 30 Sek.</div>
+      <div class="btn">Weiter</div>
+    </div>
+    <p class="ann">KI-Spiegel: die drei Momente in je einem Satz. Die Highs landen in der Freude-Bibliothek. Atmen ist optional.</p>
+  </div>
+
+  <div class="arrow"><svg aria-hidden="true" width="40" height="12" viewBox="0 0 40 12"><path d="M0 6h36M30 1l6 5-6 5" stroke="#78716C" stroke-width="1.5" fill="none"></path></svg></div>
+
+  <div class="col">
+    <p class="lbl"><span class="num">2.10</span>Erinnerung · nur beim ersten Mal</p>
+    <div class="scr dash">
+      <div class="bar"><span></span><span></span></div>
+      <div class="mid">
+        <div class="candle"><div class="flame" style="width: 18px; height: 26px"></div><div class="wick"></div><div class="cbody"></div></div>
+        <p class="h">Schön, dass du da warst.</p>
+        <p class="s">Magst du, dass ich dich morgen Abend sanft daran erinnere?</p>
+        <div class="ph" style="width: 100%; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500; color: #44403C">21:30</div>
+        <p class="s" style="font-size: 11px">Nur einmal am Abend. Jederzeit änderbar.</p>
+      </div>
+      <div class="btn">Ja, gern</div>
+      <span class="lnk" style="text-align: center">Lieber nicht</span>
+    </div>
+    <p class="ann">Erscheint nur nach dem allerersten Ritual. Schaltet die Benachrichtigung ein. Danach weiter zu 2.11.</p>
+  </div>
+
+  <div class="arrow"><svg aria-hidden="true" width="40" height="12" viewBox="0 0 40 12"><path d="M0 6h36M30 1l6 5-6 5" stroke="#78716C" stroke-width="1.5" fill="none"></path></svg></div>
+
+  <div class="col">
+    <p class="lbl"><span class="num">2.11</span>Ins Hier und Jetzt</p>
+    <div class="scr">
+      <div class="bar"><span></span><span></span></div>
+      <div class="mid">
+        <div class="candle"><div class="flame" style="width: 18px; height: 26px"></div><div class="wick"></div><div class="cbody"></div></div>
+        <p class="h">Dein Tag darf jetzt ruhen.</p>
+        <p class="s">Bleib, so lange du magst. Oder geh weiter, wohin es dich zieht.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div class="btn2">Noch bei der Kerze bleiben</div>
+        <div class="btn2">In mein Tagebuch schreiben</div>
+        <div class="btn2">Ruhige Musik hören</div>
+        <div class="btn2">Schlafen gehen</div>
+      </div>
+    </div>
+    <p class="ann">Offener Übergang, keine Anweisung. Die Kerze brennt weiter, bis du entscheidest. Bleiben: alles blendet aus, nur die Flamme bleibt. Tagebuch: freies Schreiben. Musik: öffnet z. B. eine ruhige Piano-Playlist bei Spotify. Schlafen: die Flamme erlischt sanft von selbst → 3.1.</p>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3280,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

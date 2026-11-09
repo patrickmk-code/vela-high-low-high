@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Vela – Prototipo B</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&amp;family=Nunito+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#F2B45A}a:hover{color:#F5EFE4}
+button{font-family:'Nunito Sans',sans-serif}
+button:focus-visible,textarea:focus-visible{outline:2px solid #F2B45A;outline-offset:3px}
+.flick{animation:flick 3.2s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes flick{0%,100%{transform:scale(1,1) rotate(0deg)}22%{transform:scale(0.96,1.04) rotate(-1.5deg)}48%{transform:scale(1.03,0.97) rotate(1deg)}74%{transform:scale(0.98,1.03) rotate(-0.6deg)}}
+.flickA{animation:flick 3.2s ease-in-out infinite;transform-origin:0px 0px}
+@keyframes haloB{0%,100%{opacity:.85}50%{opacity:1}}
+.recpulse{animation:recp 1.6s ease-out infinite}
+@keyframes recp{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.7);opacity:0}}
+.breath{animation:br 8s ease-in-out infinite}
+@keyframes br{0%,100%{transform:scale(.55)}50%{transform:scale(1)}}
+.bin{animation:bin 8s ease-in-out infinite}
+@keyframes bin{0%,45%{opacity:1}50%,95%{opacity:0}100%{opacity:1}}
+.bout{animation:bout 8s ease-in-out infinite}
+@keyframes bout{0%,45%{opacity:0}50%,95%{opacity:1}100%{opacity:0}}
+.hintfinger{transform-origin:15px 4px;opacity:0;animation:hf 3.4s ease-in-out 1.4s 2 both}
+@keyframes hf{0%{opacity:0;transform:translate(16px,22px)}22%{opacity:.8;transform:translate(0,0)}36%{opacity:.8;transform:translate(0,0) scale(.9)}64%{opacity:.8;transform:translate(0,0) scale(.9)}80%{opacity:.5;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(8px,12px)}}
+.hintglow{opacity:0;animation:hg 3.4s ease-in-out 1.4s 2 both}
+@keyframes hg{0%,28%{opacity:0;transform:scale(.6)}48%{opacity:.8;transform:scale(1)}66%{opacity:.6;transform:scale(1.05)}100%{opacity:0;transform:scale(1.3)}}
+.fadehint{animation:fh 4s ease forwards}
+@keyframes fh{0%{opacity:0}20%{opacity:1}70%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.hintfinger,.hintglow{animation:none;opacity:0}.flickA,.recpulse,.breath{animation:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: {{ bg }}; transition: background 1.6s ease; font-family: 'Nunito Sans', sans-serif; color: #F5EFE4">
+
+  <sc-if value="{{ showDate }}" hint-placeholder-val="{{ true }}">
+    <div style="position: absolute; top: 54px; left: 24px; right: 24px; display: flex; justify-content: space-between; align-items: center">
+      <p style="margin: 0; font-size: 14px; color: #CDBFAE">{{ dateLabel }}</p>
+      <button type="button" aria-label="Ajustes" style="width: 44px; height: 44px; border-radius: 22px; border: none; background: rgba(245,239,228,0.07); color: #CDBFAE; display: flex; align-items: center; justify-content: center">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg>
+      </button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showDots }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; top: 54px; left: 24px; right: 24px; height: 44px; display: flex; justify-content: center; align-items: center">
+      <sc-if value="{{ hasBack }}" hint-placeholder-val="{{ false }}">
+        <button type="button" aria-label="Atrás" onClick="{{ back }}" style="position: absolute; left: 0; top: 0; width: 44px; height: 44px; border-radius: 22px; border: none; background: rgba(245,239,228,0.07); color: #CDBFAE; display: flex; align-items: center; justify-content: center">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+        </button>
+      </sc-if>
+      <div aria-label="{{ stepLabel }}" style="display: flex; gap: 8px; align-items: center">
+        <sc-for list="{{ dots }}" as="d" hint-placeholder-count="3">
+          <span style="width: {{ d.w }}px; height: 8px; border-radius: 4px; background: {{ d.bg }}; border: 1.5px solid {{ d.bd }}; box-sizing: border-box; transition: all .8s"></span>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(circle at 50% 55%, rgba(242,180,90,0.34) 0%, rgba(192,138,107,0.14) 30%, rgba(43,36,48,0) 64%); opacity: {{ c.warmBg }}; transition: opacity 1.6s ease"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(circle at 50% 55%, rgba(159,180,200,0.2) 0%, rgba(159,180,200,0.06) 34%, rgba(43,36,48,0) 62%); opacity: {{ c.coolBg }}; transition: opacity 1.6s ease"></div>
+
+  <sc-if value="{{ showCandle }}" hint-placeholder-val="{{ true }}">
+    <div style="position: absolute; left: 0; top: {{ candleTop }}px; width: 390px; height: 520px; transform: scale({{ candleScale }}); transform-origin: 195px 0px; transition: top 1.4s ease, transform 1.4s ease">
+      <svg width="390" height="520" viewBox="0 0 390 520" aria-hidden="true" style="position: absolute; left: 0; top: 0; overflow: visible">
+        <defs>
+          <radialGradient id="haloA"><stop offset="0" stop-color="#F2B45A" stop-opacity="0.55"></stop><stop offset="0.38" stop-color="#E39A5C" stop-opacity="0.2"></stop><stop offset="1" stop-color="#C08A6B" stop-opacity="0"></stop></radialGradient>
+          <radialGradient id="haloCA"><stop offset="0" stop-color="#9FB4C8" stop-opacity="0.45"></stop><stop offset="1" stop-color="#9FB4C8" stop-opacity="0"></stop></radialGradient>
+          <linearGradient id="warmA" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#DC874E"></stop><stop offset="0.35" stop-color="#F0A24E"></stop><stop offset="0.75" stop-color="#F6C66E"></stop><stop offset="1" stop-color="#FBE0A0" stop-opacity="0.85"></stop></linearGradient>
+          <linearGradient id="goldA" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#F2B45A"></stop><stop offset="0.5" stop-color="#FFD47E"></stop><stop offset="1" stop-color="#FFF0C2"></stop></linearGradient>
+          <linearGradient id="coolA" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#7F98B4"></stop><stop offset="0.5" stop-color="#9FB4C8"></stop><stop offset="1" stop-color="#DCE5EA" stop-opacity="0.85"></stop></linearGradient>
+          <linearGradient id="coreA" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FFFDF5"></stop><stop offset="0.7" stop-color="#FFF1CF"></stop><stop offset="1" stop-color="#FFE3A3" stop-opacity="0.7"></stop></linearGradient>
+          <linearGradient id="bodyA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D4A27C"></stop><stop offset="1" stop-color="#AE785B"></stop></linearGradient>
+          <linearGradient id="shadeA" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4A2C24" stop-opacity="0.42"></stop><stop offset="0.32" stop-color="#4A2C24" stop-opacity="0"></stop><stop offset="0.7" stop-color="#4A2C24" stop-opacity="0"></stop><stop offset="1" stop-color="#4A2C24" stop-opacity="0.5"></stop></linearGradient>
+          <radialGradient id="lightA" cx="0.5" cy="0" r="0.9"><stop offset="0" stop-color="#FFD9A0" stop-opacity="0.65"></stop><stop offset="1" stop-color="#FFD9A0" stop-opacity="0"></stop></radialGradient>
+          <clipPath id="clipA"><path d="M138 312C136 300 160 296 195 297C232 296 254 301 253 313C257 360 250 412 255 462C256 474 232 481 195 481C158 481 134 475 136 462C141 410 132 362 138 312Z"></path></clipPath>
+          <filter id="grainA" x="0" y="0" width="1" height="1"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4"></feTurbulence><feColorMatrix type="saturate" values="0"></feColorMatrix></filter>
+          <filter id="blurA" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="5"></feGaussianBlur></filter>
+          <filter id="softA" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="0.7"></feGaussianBlur></filter>
+          <filter id="shadowA" x="-0.5" y="-2" width="2" height="5"><feGaussianBlur stdDeviation="6"></feGaussianBlur></filter>
+        </defs>
+        <g transform="translate(195 284)">
+          <g style="transform: scale({{ c.halo }}); transform-origin: 0px 0px; transition: transform 1.4s ease">
+            <circle cx="0" cy="-26" r="150" fill="url(#haloA)" style="opacity: {{ c.warmHalo }}; transition: opacity 1.4s"></circle>
+            <circle cx="0" cy="-20" r="140" fill="url(#haloCA)" style="opacity: {{ c.coolHalo }}; transition: opacity 1.4s"></circle>
+          </g>
+        </g>
+        <ellipse cx="197" cy="484" rx="82" ry="9" fill="#0E0A0D" opacity="0.55" filter="url(#shadowA)"></ellipse>
+        <path d="M138 312C136 300 160 296 195 297C232 296 254 301 253 313C257 360 250 412 255 462C256 474 232 481 195 481C158 481 134 475 136 462C141 410 132 362 138 312Z" fill="url(#bodyA)"></path>
+        <g clip-path="url(#clipA)">
+          <rect x="120" y="290" width="150" height="200" filter="url(#grainA)" opacity="0.13"></rect>
+          <g fill="none" stroke="#7E5040" stroke-opacity="0.24" stroke-width="1.1" stroke-linecap="round">
+            <path d="M120 334C160 330 220 339 272 333"></path>
+            <path d="M120 357C165 353 214 361 272 355"></path>
+            <path d="M120 380C158 377 222 384 272 378"></path>
+            <path d="M120 403C168 399 210 407 272 401"></path>
+            <path d="M120 426C160 423 220 430 272 424"></path>
+            <path d="M120 449C166 445 214 453 272 447"></path>
+            <path d="M120 471C160 468 222 475 272 469"></path>
+          </g>
+          <path d="M232 302C235 360 229 420 234 480" fill="none" stroke="#6E4334" stroke-opacity="0.3" stroke-width="1.4"></path>
+          <rect x="120" y="290" width="150" height="200" fill="url(#shadeA)"></rect>
+          <rect x="120" y="290" width="150" height="200" fill="url(#lightA)" style="opacity: {{ c.lightA }}; transition: opacity 1.4s"></rect>
+        </g>
+        <path d="M140 309C142 301 166 299 195 300C226 299 250 302 251 310C247 316 226 318 195 318C166 318 144 316 140 309Z" fill="#E3BD95"></path>
+        <ellipse cx="195" cy="308" rx="34" ry="5" fill="#EDD0AC"></ellipse>
+        <path d="M151 309C147 322 148 338 151 345C154 351 159 346 159 336C159 324 160 315 165 311Z" fill="#D9AD86"></path>
+        <g transform="translate(195 284)">
+          <path d="M0 15C-1 9 1 4 0 -2" stroke="#2E211D" stroke-width="2.4" stroke-linecap="round" fill="none"></path>
+          <circle cx="0" cy="-2" r="14" fill="url(#haloA)" style="opacity: {{ c.ember }}; transition: opacity .4s"></circle>
+          <g style="transform: scale({{ c.scale }}); transform-origin: 0px 0px; opacity: {{ c.fop }}; transition: transform 1.4s ease, opacity 1s ease">
+            <g class="flickA">
+              <path d="{{ fpath }}" fill="#F2B45A" opacity="0.32" filter="url(#blurA)"></path>
+              <path d="{{ fpath }}" fill="url(#warmA)" style="opacity: {{ c.warmF }}; transition: opacity 1.4s"></path>
+              <path d="{{ fpath }}" fill="url(#goldA)" style="opacity: {{ c.goldF }}; transition: opacity 1.4s"></path>
+              <path d="{{ fpath }}" fill="url(#coolA)" style="opacity: {{ c.coolF }}; transition: opacity 1.4s"></path>
+              <path d="{{ fcore }}" fill="url(#coreA)" filter="url(#softA)"></path>
+            </g>
+          </g>
+          <circle cx="0" cy="-14" r="42" fill="none" stroke="#F2B45A" stroke-width="2" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="{{ ringOff }}" transform="rotate(-90 0 -14)" style="opacity: {{ ringOp }}; transition: opacity .6s"></circle>
+        </g>
+      </svg>
+      <sc-if value="{{ showWickHint }}" hint-placeholder-val="{{ false }}">
+        <div aria-hidden="true" style="position: absolute; left: 175px; top: 261px; width: 40px; height: 40px; pointer-events: none">
+          <span class="hintglow" style="position: absolute; left: -10px; top: -10px; width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle, rgba(246,198,110,0.4) 0%, rgba(246,198,110,0.12) 45%, rgba(246,198,110,0) 70%)"></span>
+          <div class="hintfinger" style="position: absolute; left: 5px; top: 16px; width: 34px; height: 44px">
+            <svg width="34" height="44" viewBox="0 0 34 44" fill="none" stroke="#F5EFE4" stroke-opacity="0.85" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V7a3 3 0 0 1 6 0v12"></path><path d="M18 17a3 3 0 0 1 6 0v4"></path><path d="M24 20a3 3 0 0 1 6 0v6c0 8-5 14-12 14h-1c-5 0-8-3-10-7l-4-8a2.6 2.6 0 0 1 4.3-2.8L12 28"></path></svg>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ canHold }}" hint-placeholder-val="{{ false }}">
+        <button type="button" aria-label="Encender a Vela: mantén pulsada la mecha" onPointerDown="{{ holdDown }}" onPointerUp="{{ holdUp }}" onPointerCancel="{{ holdUp }}" onKeyDown="{{ keyDown }}" onKeyUp="{{ keyUp }}" onContextMenu="{{ noMenu }}" style="position: absolute; left: 135px; top: 200px; width: 120px; height: 140px; border-radius: 60px; border: none; background: transparent; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none"></button>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isIntro }}" hint-placeholder-val="{{ true }}">
+    <div style="position: absolute; left: 32px; right: 32px; top: 120px; bottom: 40px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px">
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 32px; line-height: 1.2">Hola, soy Vela.</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.55; color: #CDBFAE">Cada noche, tres momentos: algo bueno, algo difícil y otra vez algo bueno. No hace falta más.</p>
+      <div style="flex-grow: 1"></div>
+      <button type="button" onClick="{{ startIntro }}" style="width: 100%; height: 58px; border-radius: 29px; border: none; background: #F2B45A; color: #2B2430; font-size: 17px; font-weight: 700; cursor: pointer">Enciende tu primera luz</button>
+      <p style="margin: 0; font-size: 13px; color: #CDBFAE">Tus momentos son solo tuyos.</p>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isHomeOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 32px; right: 32px; top: 120px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 18px">
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 30px; line-height: 1.22">Aquí estoy, cuando quieras.</h1>
+      <p style="margin: 0; padding: 8px 16px; border-radius: 16px; background: rgba(245,239,228,0.07); font-size: 14px; color: #E6DACB">Mantén pulsada la mecha</p>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isHomeDone }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 28px; right: 28px; top: 110px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px">
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 30px">Que descanses.</h1>
+      <div style="width: 100%; box-sizing: border-box; padding: 16px 18px; border-radius: 20px; background: rgba(245,239,228,0.06); text-align: left; display: flex; flex-direction: column; gap: 10px">
+        <p style="margin: 0; font-size: 13px; font-weight: 700; color: #E6DACB">Tu día</p>
+        <sc-for list="{{ mirror }}" as="m" hint-placeholder-count="3">
+          <div style="display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45; color: #F5EFE4"><span style="width: 8px; height: 8px; border-radius: 4px; margin-top: 6px; flex-shrink: 0; background: {{ m.dot }}"></span>{{ m.text }}</div>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 14px; color: #CDBFAE">Mañana por la noche te espera tu luz.</p>
+      <button type="button" onClick="{{ reset }}" style="min-height: 44px; border: none; background: transparent; color: #F2B45A; font-size: 13px; text-decoration: underline; cursor: pointer">Reiniciar prototipo</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isLighting }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 32px; right: 32px; top: 120px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px">
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 30px; line-height: 1.22">{{ breathText }}</h1>
+      <p style="margin: 0; font-size: 15px; color: #CDBFAE">Deja el dedo sobre la mecha.</p>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isLit }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 32px; right: 32px; top: 120px; text-align: center">
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 30px">Tu luz está encendida.</h1>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isInput }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 28px; right: 28px; top: 110px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px">
+      <sc-if value="{{ q.hasEb }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 0; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #CDBFAE">{{ q.eb }}</p>
+      </sc-if>
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 27px; line-height: 1.22">{{ q.t }}</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #CDBFAE">{{ q.s }}</p>
+    </div>
+    <div style="position: absolute; left: 28px; right: 28px; top: 588px; height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px">
+      <sc-if value="{{ q.showMic }}" hint-placeholder-val="{{ true }}">
+        <div style="position: relative; width: 84px; height: 84px">
+          <sc-if value="{{ rec }}" hint-placeholder-val="{{ false }}">
+            <span class="recpulse" style="position: absolute; inset: 0; border-radius: 42px; background: {{ q.accent }}"></span>
+          </sc-if>
+          <button type="button" aria-label="{{ q.micLabel }}" aria-pressed="{{ rec }}" onClick="{{ toggleRec }}" style="position: relative; width: 84px; height: 84px; border-radius: 42px; border: none; background: {{ q.accent }}; color: #2B2430; display: flex; align-items: center; justify-content: center; cursor: pointer">
+            <sc-if value="{{ rec }}" hint-placeholder-val="{{ false }}">
+              <span style="width: 22px; height: 22px; border-radius: 5px; background: #2B2430"></span>
+            </sc-if>
+            <sc-if value="{{ notRec }}" hint-placeholder-val="{{ true }}">
+              <svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
+            </sc-if>
+          </button>
+        </div>
+        <p style="margin: 0; font-size: 14px; color: #E6DACB">{{ q.micText }}</p>
+      </sc-if>
+      <sc-if value="{{ typing }}" hint-placeholder-val="{{ false }}">
+        <textarea aria-label="{{ q.t }}" placeholder="Escribe sin más …" value="{{ q.text }}" onChange="{{ onText }}" style="width: 100%; height: 130px; box-sizing: border-box; padding: 14px 16px; border-radius: 18px; border: 1px solid rgba(245,239,228,0.2); background: rgba(245,239,228,0.06); color: #F5EFE4; font-family: 'Nunito Sans', sans-serif; font-size: 15px; line-height: 1.5; resize: none"></textarea>
+      </sc-if>
+    </div>
+    <div style="position: absolute; left: 24px; right: 24px; bottom: 84px; display: flex; justify-content: space-between; align-items: center">
+      <button type="button" onClick="{{ toggleType }}" style="min-height: 44px; padding: 0 8px; border: none; background: transparent; color: #E6DACB; font-size: 15px; cursor: pointer">{{ q.typeLabel }}</button>
+      <sc-if value="{{ q.hasSkip }}" hint-placeholder-val="{{ false }}">
+        <button type="button" onClick="{{ skip }}" style="min-height: 44px; padding: 0 8px; border: none; background: transparent; color: #CDBFAE; font-size: 15px; cursor: pointer">{{ q.skipLabel }}</button>
+      </sc-if>
+    </div>
+    <div style="position: absolute; left: 28px; right: 28px; bottom: 24px">
+      <button type="button" onClick="{{ next }}" style="width: 100%; height: 52px; border-radius: 26px; border: 1px solid rgba(245,239,228,0.25); background: {{ q.nextBg }}; color: {{ q.nextFg }}; font-size: 16px; font-weight: 700; cursor: pointer; transition: background .6s, color .6s">Seguir</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isMirror }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 28px; right: 28px; top: 110px; bottom: 28px; display: flex; flex-direction: column; gap: 14px">
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 28px; text-align: center">Tu día</h1>
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 4px 8px">
+        <sc-for list="{{ mirror }}" as="m" hint-placeholder-count="3">
+          <div style="display: flex; gap: 12px; align-items: flex-start; font-size: 16px; line-height: 1.45"><span style="width: 9px; height: 9px; border-radius: 5px; margin-top: 7px; flex-shrink: 0; background: {{ m.dot }}"></span>{{ m.text }}</div>
+        </sc-for>
+      </div>
+      <div style="flex-grow: 1"></div>
+      <button type="button" onClick="{{ startBreath }}" style="width: 100%; height: 50px; border-radius: 25px; border: 1px solid rgba(245,239,228,0.25); background: transparent; color: #F5EFE4; font-size: 15px; cursor: pointer">Respirar un momento</button>
+      <button type="button" onClick="{{ fromMirror }}" style="width: 100%; height: 52px; border-radius: 26px; border: none; background: #F2B45A; color: #2B2430; font-size: 16px; font-weight: 700; cursor: pointer">Seguir</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isRemind }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 28px; right: 28px; top: 110px; bottom: 28px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px">
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 28px">Qué bien que hayas venido.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #CDBFAE">¿Quieres que mañana por la noche te lo recuerde con suavidad?</p>
+      <div style="display: flex; gap: 10px; margin-top: 6px">
+        <sc-for list="{{ times }}" as="tm" hint-placeholder-count="3">
+          <button type="button" aria-pressed="{{ tm.on }}" onClick="{{ tm.pick }}" style="min-width: 84px; height: 46px; border-radius: 23px; border: 1px solid {{ tm.bd }}; background: {{ tm.bg }}; color: #F5EFE4; font-size: 15px; font-weight: 600; cursor: pointer">{{ tm.label }}</button>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #CDBFAE">Solo una vez por la noche. Puedes cambiarlo cuando quieras.</p>
+      <div style="flex-grow: 1"></div>
+      <button type="button" onClick="{{ remindYes }}" style="width: 100%; height: 52px; border-radius: 26px; border: none; background: #F2B45A; color: #2B2430; font-size: 16px; font-weight: 700; cursor: pointer">Sí, por favor</button>
+      <button type="button" onClick="{{ remindNo }}" style="min-height: 44px; border: none; background: transparent; color: #E6DACB; font-size: 15px; cursor: pointer">Mejor no</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isNow }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 28px; right: 28px; top: 110px; bottom: 28px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px">
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 28px">Tu día ya puede descansar.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #CDBFAE">Quédate todo el tiempo que quieras. O sigue hacia donde te lleve el momento.</p>
+      <div style="flex-grow: 1"></div>
+      <div style="width: 100%; display: flex; flex-direction: column; gap: 10px">
+        <button type="button" onClick="{{ toStay }}" style="height: 50px; border-radius: 25px; border: 1px solid rgba(245,239,228,0.22); background: rgba(245,239,228,0.04); color: #F5EFE4; font-size: 15px; cursor: pointer">Quedarme con la vela</button>
+        <button type="button" onClick="{{ toJournal }}" style="height: 50px; border-radius: 25px; border: 1px solid rgba(245,239,228,0.22); background: rgba(245,239,228,0.04); color: #F5EFE4; font-size: 15px; cursor: pointer">Escribir en mi diario</button>
+        <button type="button" onClick="{{ toMusic }}" style="height: 50px; border-radius: 25px; border: 1px solid rgba(245,239,228,0.22); background: rgba(245,239,228,0.04); color: #F5EFE4; font-size: 15px; cursor: pointer">Escuchar música tranquila</button>
+        <button type="button" onClick="{{ toSleep }}" style="height: 50px; border-radius: 25px; border: 1px solid rgba(245,239,228,0.22); background: rgba(245,239,228,0.04); color: #F5EFE4; font-size: 15px; cursor: pointer">Irme a dormir</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isStay }}" hint-placeholder-val="{{ false }}">
+    <p class="fadehint" style="position: absolute; left: 0; right: 0; bottom: 120px; margin: 0; text-align: center; font-size: 13px; color: #CDBFAE">Toca en cualquier lugar para volver</p>
+    <button type="button" aria-label="Volver a las opciones" onClick="{{ toNow }}" style="position: absolute; inset: 0; border: none; background: transparent; cursor: pointer"></button>
+  </sc-if>
+
+  <sc-if value="{{ isJournal }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 24px; right: 24px; top: 70px; bottom: 34px; display: flex; flex-direction: column; gap: 14px">
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 28px">Tu diario</h1>
+      <p style="margin: 0; font-size: 14px; color: #CDBFAE">Sin preguntas. Solo lo que aún quiera salir.</p>
+      <textarea aria-label="Diario" placeholder="Escribe sin más …" value="{{ journal }}" onChange="{{ onJournal }}" style="flex-grow: 1; box-sizing: border-box; padding: 16px; border-radius: 20px; border: 1px solid rgba(245,239,228,0.2); background: rgba(245,239,228,0.05); color: #F5EFE4; font-family: 'Nunito Sans', sans-serif; font-size: 16px; line-height: 1.6; resize: none"></textarea>
+      <button type="button" onClick="{{ toNow }}" style="width: 100%; height: 52px; border-radius: 26px; border: none; background: #F2B45A; color: #2B2430; font-size: 16px; font-weight: 700; cursor: pointer">Listo</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isMusic }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(14,10,13,0.55)"></div>
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 28px 28px 40px; border-radius: 28px 28px 0 0; background: #3A3140; display: flex; flex-direction: column; gap: 12px">
+      <div style="width: 40px; height: 4px; border-radius: 2px; background: rgba(245,239,228,0.25); align-self: center"></div>
+      <p style="margin: 0; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: #CDBFAE">Música tranquila</p>
+      <h2 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 26px">Piano tranquilo</h2>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #CDBFAE">En la app final, aquí se abrirá Spotify con una playlist de piano tranquilo. Vela sigue encendida en segundo plano.</p>
+      <button type="button" onClick="{{ toNow }}" style="margin-top: 8px; width: 100%; height: 52px; border-radius: 26px; border: none; background: #F2B45A; color: #2B2430; font-size: 16px; font-weight: 700; cursor: pointer">Volver con Vela</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isSleep }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 32px; right: 32px; top: 120px; text-align: center">
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 32px">Que descanses.</h1>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ breathing }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: #221D28; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px">
+      <div style="position: relative; width: 240px; height: 240px; display: flex; align-items: center; justify-content: center">
+        <div class="breath" style="position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(242,180,90,0.5) 0%, rgba(242,180,90,0.14) 55%, rgba(242,180,90,0) 72%)"></div>
+        <p class="bin" style="position: absolute; margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 24px">Inhala</p>
+        <p class="bout" style="position: absolute; margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 24px">Exhala</p>
+      </div>
+      <button type="button" onClick="{{ stopBreath }}" style="min-width: 160px; height: 50px; border-radius: 25px; border: 1px solid rgba(245,239,228,0.25); background: transparent; color: #F5EFE4; font-size: 15px; cursor: pointer">Listo</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isReview }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 24px; right: 24px; top: 116px; bottom: 110px; display: flex; flex-direction: column; gap: 12px; overflow: auto">
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 30px">Resumen</h1>
+      <div style="padding: 16px; border-radius: 20px; background: rgba(245,239,228,0.06); display: flex; flex-direction: column; gap: 6px">
+        <p style="margin: 0; font-size: 13px; font-weight: 700; color: #E6DACB">Esta semana</p>
+        <p style="margin: 0; font-size: 15px; line-height: 1.5">Muchos de tus highs giraron en torno al tiempo con amigos. Lo más difícil fue la presión del tiempo a principios de semana.</p>
+      </div>
+      <div style="padding: 16px; border-radius: 20px; background: rgba(245,239,228,0.06); display: flex; flex-direction: column; gap: 10px">
+        <p style="margin: 0; font-size: 13px; font-weight: 700; color: #E6DACB">Tus fuentes de energía</p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><span style="padding: 6px 12px; border-radius: 14px; background: rgba(242,180,90,0.16); color: #FBE0A0; font-size: 13px">Naturaleza · a menudo</span><span style="padding: 6px 12px; border-radius: 14px; background: rgba(242,180,90,0.16); color: #FBE0A0; font-size: 13px">Amigos · a menudo</span><span style="padding: 6px 12px; border-radius: 14px; background: rgba(242,180,90,0.16); color: #FBE0A0; font-size: 13px">Calma por la mañana</span></div>
+      </div>
+      <div style="padding: 16px; border-radius: 20px; background: rgba(245,239,228,0.06); display: flex; flex-direction: column; gap: 10px">
+        <p style="margin: 0; font-size: 13px; font-weight: 700; color: #E6DACB">Lo que te quita energía</p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><span style="padding: 6px 12px; border-radius: 14px; background: rgba(159,180,200,0.2); color: #DCE5EA; font-size: 13px">Prisas · sobre todo los lunes</span><span style="padding: 6px 12px; border-radius: 14px; background: rgba(159,180,200,0.2); color: #DCE5EA; font-size: 13px">Poco sueño</span></div>
+      </div>
+      <div style="padding: 16px; border-radius: 20px; border: 1px solid rgba(242,180,90,0.35); display: flex; flex-direction: column; gap: 6px">
+        <p style="margin: 0; font-size: 13px; font-weight: 700; color: #F2B45A">Más de esto</p>
+        <p style="margin: 0; font-size: 15px; line-height: 1.5">Hace tiempo que no sales a la naturaleza. ¿Te apetece esta semana?</p>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isHighs }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 24px; right: 24px; top: 116px; bottom: 110px; display: flex; flex-direction: column; gap: 12px; overflow: auto">
+      <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 30px">Tus highs</h1>
+      <div style="padding: 16px; border-radius: 20px; border: 1px solid rgba(242,180,90,0.35); display: flex; gap: 14px; align-items: center">
+        <span style="width: 40px; height: 40px; border-radius: 20px; background: #F2B45A; flex-shrink: 0; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 12 12"><path d="M3 1.5v9l7.5-4.5z" fill="#2B2430"></path></svg></span>
+        <div style="display: flex; flex-direction: column; gap: 2px"><p style="margin: 0; font-size: 12px; color: #F2B45A; font-weight: 700">Hace un año</p><p style="margin: 0; font-size: 15px">Una tarde en el lago con amigos</p></div>
+      </div>
+      <sc-for list="{{ highsList }}" as="hi" hint-placeholder-count="3">
+        <div style="padding: 14px 16px; border-radius: 20px; background: rgba(245,239,228,0.06); display: flex; gap: 14px; align-items: center">
+          <span style="width: 36px; height: 36px; border-radius: 18px; border: 1.5px solid rgba(245,239,228,0.4); flex-shrink: 0; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12"><path d="M3 1.5v9l7.5-4.5z" fill="#F5EFE4"></path></svg></span>
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><p style="margin: 0; font-size: 12px; color: #CDBFAE">{{ hi.d }}</p><p style="margin: 0; font-size: 15px; line-height: 1.4">{{ hi.t }}</p></div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Navegación principal" style="position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-around; padding: 12px 24px 30px; border-top: 1px solid rgba(245,239,228,0.08); background: {{ bg }}">
+      <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="3">
+        <button type="button" aria-current="{{ tb.cur }}" onClick="{{ tb.pick }}" style="min-width: 72px; min-height: 48px; border: none; background: transparent; color: {{ tb.fg }}; font-size: 12px; font-weight: {{ tb.fw }}; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer">
+          <span style="width: 22px; height: 22px; border-radius: 11px; border: 1.6px solid {{ tb.fg }}; box-sizing: border-box; display: flex; align-items: center; justify-content: center"><span style="width: 8px; height: 8px; border-radius: 4px; background: {{ tb.dot }}"></span></span>
+          {{ tb.label }}
+        </button>
+      </sc-for>
+    </nav>
+  </sc-if>
+
+  <sc-if value="{{ showRestart }}" hint-placeholder-val="{{ true }}">
+    <button type="button" aria-label="Reiniciar prototipo" title="Reiniciar prototipo" onClick="{{ reset }}" style="position: absolute; left: 50%; top: 6px; margin-left: -22px; width: 44px; height: 44px; border-radius: 22px; border: none; background: transparent; color: rgba(245,239,228,0.45); display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v5h5"></path></svg>
+    </button>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"breathSeconds":{"editor":"range","min":3,"max":12,"step":1,"unit":"s","default":8,"section":"Encender"},"$preview":{"width":390,"height":844}}'>
+var GOLD = '#F2B45A', COOL = '#9FB4C8';
+var IN = {
+  high1: { eb: 'High', t: '¿Qué fue hoy un buen momento?', s: 'Puede ser algo muy pequeño.', dot: 0, next: 'low', back: null, skip: null },
+  low: { eb: 'Low', t: '¿Y qué fue difícil hoy?', s: 'Puedes dejarlo aquí, sin más.', dot: 1, next: 'ask', back: 'high1', skip: 'Saltar hoy', skipTo: 'high2' },
+  ask: { eb: '', t: 'Suena agotador.', s: '¿Qué te habría sentado bien en ese momento?', dot: 1, next: 'high2', back: 'low', skip: 'Saltar', skipTo: 'high2' },
+  high2: { eb: 'High', t: 'Terminemos con algo bonito.', s: '¿Qué más fue bonito hoy? ¿O qué te hace ilusión?', dot: 2, next: 'mirror', back: 'low', skip: null }
+};
+var FALL = { high1: 'Un paseo al sol', low: 'Una reunión pesada', high2: 'Ganas de que llegue el viernes' };
+// [flameScale, coolness, haloScale, warmHalo]
+var F = {
+  intro: [0, 0, 0.6, 0.25], home: [0, 0, 0.6, 0.25], lit: [1, 0, 1, 1],
+  high1: [1.3, 0, 1.3, 1], low: [0.68, 1, 0.75, 0], ask: [0.68, 1, 0.75, 0], high2: [1.15, 0, 1.18, 1],
+  mirror: [1, 0, 1, 1], remind: [1, 0, 1, 1], now: [0.95, 0, 1, 1], stay: [1.08, 0, 1.2, 1],
+  journal: [0.9, 0, 1, 1], music: [0.95, 0, 1, 1], sleep: [0, 0, 0.55, 0.15], review: [0, 0, 0.6, 0.2], highs: [0, 0, 0.6, 0.2]
+};
+function pad(n) { return n < 10 ? '0' + n : '' + n; }
+function r2(n) { return Math.round(n * 100) / 100; }
+function fp(w, h, l) {
+  return 'M0 0C' + r2(-w * 0.55) + ' 0 ' + r2(-w * 0.56 + l * 0.08) + ' ' + r2(-h * 0.36) + ' ' + r2(-w * 0.32 + l * 0.3) + ' ' + r2(-h * 0.6) +
+    'C' + r2(-w * 0.14 + l * 0.6) + ' ' + r2(-h * 0.8) + ' ' + r2(l * 0.85 - w * 0.03) + ' ' + r2(-h * 0.93) + ' ' + r2(l) + ' ' + r2(-h) +
+    'C' + r2(l * 0.85 + w * 0.05) + ' ' + r2(-h * 0.9) + ' ' + r2(w * 0.16 + l * 0.6) + ' ' + r2(-h * 0.78) + ' ' + r2(w * 0.32 + l * 0.3) + ' ' + r2(-h * 0.6) +
+    'C' + r2(w * 0.56 + l * 0.08) + ' ' + r2(-h * 0.36) + ' ' + r2(w * 0.55) + ' 0 0 0Z';
+}
+var FPATH = fp(22, 58, 0), FCORE = fp(9, 24, 0);
+function blank() {
+  return { phase: 'intro', prog: 0, texts: { high1: '', low: '', ask: '', high2: '' }, voice: { high1: 0, low: 0, ask: 0, high2: 0 },
+    typing: false, rec: false, recSec: 0, firstTime: true, remindTime: '21:30', done: false, breathing: false, journal: '', tab: 'home' };
+}
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = blank();
+    this.lt = null; this.rt = null; this.timers = []; this.holding = false;
+  }
+  componentWillUnmount() { clearInterval(this.lt); clearInterval(this.rt); this.timers.forEach(function (t) { clearTimeout(t); }); }
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+  stopRec() {
+    if (this.rt) { clearInterval(this.rt); this.rt = null; }
+    if (this.state.rec) {
+      var k = this.state.phase, v = Object.assign({}, this.state.voice);
+      v[k] = Math.max(this.state.recSec, 1);
+      this.setState({ rec: false, voice: v });
+    }
+  }
+  go(ph) { this.stopRec(); this.setState({ phase: ph, typing: false }); }
+  holdDown() {
+    var ph = this.state.phase;
+    if (this.state.done || (ph !== 'home' && ph !== 'lighting')) return;
+    this.holding = true;
+    if (ph === 'home') this.setState({ phase: 'lighting' });
+    this.startTick();
+  }
+  holdUp() { this.holding = false; }
+  startTick() {
+    if (this.lt) return;
+    var self = this; this.last = Date.now();
+    this.lt = setInterval(function () {
+      var now = Date.now(), dt = now - self.last; self.last = now;
+      var secs = self.props.breathSeconds != null ? self.props.breathSeconds : 8;
+      var p = self.state.prog + (self.holding ? dt / (secs * 1000) : -dt / 900);
+      if (p >= 1) {
+        clearInterval(self.lt); self.lt = null; self.holding = false;
+        self.setState({ prog: 1, phase: 'lit' });
+        self.later(function () { self.setState({ phase: 'high1', prog: 0 }); }, 1700);
+        return;
+      }
+      if (p <= 0 && !self.holding) {
+        clearInterval(self.lt); self.lt = null;
+        self.setState({ prog: 0, phase: 'home' });
+        return;
+      }
+      self.setState({ prog: Math.max(0, p) });
+    }, 40);
+  }
+  renderVals() {
+    var self = this, st = this.state, ph = st.phase, prog = st.prog;
+    var inputPh = IN[ph] ? ph : null;
+    var f = F[ph] || F.home;
+    if (ph === 'home' && st.done) f = F.sleep;
+    var scale = f[0], cool = f[1], halo = f[2], warmHalo = f[3];
+    var ember = 0, lightA = scale > 0 ? 0.6 : 0.06;
+    if (ph === 'lighting') {
+      var ex = prog < 0.5 ? 0 : (prog - 0.5) * 2;
+      scale = ex; halo = 0.6 + 0.4 * prog; warmHalo = 0.25 + 0.75 * prog; lightA = 0.06 + 0.54 * ex;
+      ember = Math.min(1, prog * 2);
+    }
+    var coolBg = ph === 'low' || ph === 'ask';
+    var gold = ph === 'high1' || ph === 'high2';
+    var cfg = {
+      scale: Math.round(scale * 100) / 100, fop: scale > 0.02 ? 1 : 0, halo: Math.round(halo * 100) / 100,
+      warmHalo: Math.round(warmHalo * (1 - cool) * 100) / 100, coolHalo: cool ? 1 : 0,
+      warmF: cool ? 0 : 1, goldF: gold ? 1 : 0, coolF: cool ? 1 : 0, ember: Math.round(ember * 100) / 100,
+      lightA: Math.round(lightA * 100) / 100,
+      warmBg: coolBg ? 0 : Math.round(Math.min(1, scale) * 100) / 100, coolBg: coolBg ? 1 : 0
+    };
+    var bg = (ph === 'stay' || ph === 'sleep' || (ph === 'home' && st.done)) ? '#211B26' : '#2B2430';
+
+    var mirror = [];
+    function ln(k) {
+      var t = (st.texts[k] || '').trim();
+      if (t) return t.length > 72 ? t.slice(0, 70) + ' …' : t;
+      if (st.voice[k] > 0) return FALL[k];
+      return '';
+    }
+    [{ k: 'high1', c: GOLD }, { k: 'low', c: COOL }, { k: 'high2', c: GOLD }].forEach(function (o) {
+      var t = ln(o.k); if (t) mirror.push({ text: t, dot: o.c });
+    });
+    if (!mirror.length) mirror = [{ text: FALL.high1, dot: GOLD }, { text: FALL.low, dot: COOL }, { text: FALL.high2, dot: GOLD }];
+
+    var q = null;
+    if (inputPh) {
+      var d = IN[inputPh], k = inputPh, accent = coolBg ? COOL : GOLD;
+      var has = !!(st.texts[k] || '').trim() || st.voice[k] > 0;
+      var micText = st.rec ? ('Te escucho … 0:' + pad(st.recSec)) : (st.voice[k] > 0 ? ('Nota de voz · 0:' + pad(st.voice[k]) + ' · toca para repetir') : 'Toca y cuéntamelo');
+      q = { eb: d.eb, hasEb: !!d.eb, t: d.t, s: d.s, showMic: !st.typing, text: st.texts[k], accent: accent,
+        micLabel: st.rec ? 'Detener grabación' : 'Iniciar grabación', micText: micText,
+        typeLabel: st.typing ? 'Prefiero hablar' : 'Prefiero escribir', hasSkip: !!d.skip, skipLabel: d.skip || '',
+        nextBg: has ? accent : 'transparent', nextFg: has ? '#2B2430' : '#F5EFE4' };
+    }
+    var dotIdx = inputPh ? IN[inputPh].dot : -1;
+    var dots = [0, 1, 2].map(function (i) {
+      var on = i === dotIdx, done = i < dotIdx, c = i === 1 ? COOL : GOLD;
+      return { w: on ? 24 : 8, bg: (on || done) ? c : 'transparent', bd: (on || done) ? c : 'rgba(245,239,228,0.35)' };
+    });
+    var highsList = [];
+    ['high1', 'high2'].forEach(function (k) {
+      var t = ln(k); if (t) highsList.push({ d: 'Hoy', t: t });
+    });
+    highsList.push({ d: 'Sábado', t: 'Cena con amigos' }, { d: '4 de noviembre', t: 'En el lago, por fin al aire libre' }, { d: '2 de noviembre', t: 'Una mañana tranquila con café' });
+    var tabPh = (ph === 'review' || ph === 'highs') ? ph : 'home';
+    var tabs = [{ id: 'home', label: 'Hoy' }, { id: 'review', label: 'Resumen' }, { id: 'highs', label: 'Highs' }].map(function (tb) {
+      var on = tb.id === tabPh;
+      return { label: tb.label, cur: on ? 'page' : 'false', fg: on ? GOLD : '#CDBFAE', fw: on ? 700 : 400, dot: on ? GOLD : 'transparent',
+        pick: function () { self.go(tb.id); } };
+    });
+    var times = ['21:00', '21:30', '22:00'].map(function (tm) {
+      var on = st.remindTime === tm;
+      return { label: tm, on: on, bd: on ? GOLD : 'rgba(245,239,228,0.22)', bg: on ? 'rgba(242,180,90,0.18)' : 'transparent',
+        pick: function () { self.setState({ remindTime: tm }); } };
+    });
+    var isHome = ph === 'home';
+    var CT = ph === 'stay' ? [140, 1] : (inputPh ? [230, 0.7] : ((ph === 'home' && st.done) ? [300, 0.6] : ((ph === 'mirror' || ph === 'remind' || ph === 'now') ? [270, 0.6] : [230, 0.9])));
+    return {
+      bg: bg, c: cfg, q: q || {}, dots: dots, mirror: mirror, highsList: highsList, tabs: tabs, times: times,
+      rec: st.rec, notRec: !st.rec, typing: st.typing, breathing: st.breathing, journal: st.journal,
+      dateLabel: 'Lunes, 9 de noviembre',
+      stepLabel: 'Paso ' + (dotIdx + 1) + ' de 3',
+      showDate: isHome || ph === 'intro' && false,
+      showDots: !!inputPh, hasBack: !!(inputPh && IN[inputPh].back),
+      showCandle: ph !== 'review' && ph !== 'highs' && ph !== 'journal',
+      candleTop: CT[0], candleScale: CT[1],
+      fpath: FPATH, fcore: FCORE,
+      showWickHint: isHome && !st.done,
+      ringOp: ph === 'lighting' ? 1 : 0, ringOff: Math.round((1 - prog) * 1000) / 1000,
+      canHold: (isHome && !st.done) || ph === 'lighting',
+      breathText: prog < 0.5 ? 'Inhala conmigo.' : 'Y exhala despacio.',
+      isIntro: ph === 'intro', isHomeOpen: isHome && !st.done, isHomeDone: isHome && st.done,
+      isLighting: ph === 'lighting', isLit: ph === 'lit', isInput: !!inputPh, isMirror: ph === 'mirror',
+      isRemind: ph === 'remind', isNow: ph === 'now', isStay: ph === 'stay', isJournal: ph === 'journal',
+      isMusic: ph === 'music', isSleep: ph === 'sleep', isReview: ph === 'review', isHighs: ph === 'highs',
+      showRestart: ph !== 'intro',
+      showNav: isHome || ph === 'review' || ph === 'highs',
+      startIntro: function () { self.go('home'); },
+      holdDown: function (ev) {
+        if (ev && ev.currentTarget && ev.pointerId != null && ev.currentTarget.setPointerCapture) { try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch (x) {} }
+        self.holdDown();
+      },
+      holdUp: function () { self.holdUp(); },
+      keyDown: function (ev) { if (ev && (ev.key === ' ' || ev.key === 'Enter')) { ev.preventDefault(); if (!self.holding) self.holdDown(); } },
+      keyUp: function (ev) { if (ev && (ev.key === ' ' || ev.key === 'Enter')) self.holdUp(); },
+      noMenu: function (ev) { if (ev) ev.preventDefault(); },
+      toggleRec: function () {
+        if (self.state.rec) { self.stopRec(); return; }
+        self.setState({ rec: true, recSec: 0, typing: false });
+        self.rt = setInterval(function () { self.setState({ recSec: self.state.recSec + 1 }); }, 1000);
+      },
+      toggleType: function () { self.stopRec(); self.setState({ typing: !self.state.typing }); },
+      onText: function (ev) { var k = self.state.phase, t = Object.assign({}, self.state.texts); t[k] = ev.target.value; self.setState({ texts: t }); },
+      next: function () { if (inputPh) self.go(IN[inputPh].next); },
+      back: function () { if (inputPh && IN[inputPh].back) self.go(IN[inputPh].back); },
+      skip: function () { if (inputPh && IN[inputPh].skipTo) self.go(IN[inputPh].skipTo); },
+      startBreath: function () { self.setState({ breathing: true }); },
+      stopBreath: function () { self.setState({ breathing: false }); },
+      fromMirror: function () { self.go(self.state.firstTime ? 'remind' : 'now'); },
+      remindYes: function () { self.setState({ firstTime: false }); self.go('now'); },
+      remindNo: function () { self.setState({ firstTime: false }); self.go('now'); },
+      toStay: function () { self.go('stay'); },
+      toNow: function () { self.go('now'); },
+      toJournal: function () { self.go('journal'); },
+      onJournal: function (ev) { self.setState({ journal: ev.target.value }); },
+      toMusic: function () { self.go('music'); },
+      toSleep: function () {
+        self.go('sleep');
+        self.later(function () { self.setState({ phase: 'home', done: true }); }, 4200);
+      },
+      reset: function () { self.stopRec(); clearInterval(self.lt); self.lt = null; self.holding = false; self.setState(blank()); }
+    };
+  }
+}
+</script>
+</body>
+</html>

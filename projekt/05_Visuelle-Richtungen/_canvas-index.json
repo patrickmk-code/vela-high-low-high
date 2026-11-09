@@ -1,0 +1,312 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "A-Low.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "richtungen",
+      "radius": 44,
+      "title": "A · Abendlicht – Low",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "B-Low.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "richtungen",
+      "radius": 44,
+      "title": "B · Garten – Low",
+      "w": 390,
+      "x": 470,
+      "y": 1224
+    },
+    "B-Start.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "richtungen",
+      "radius": 44,
+      "title": "B · Garten – Heute",
+      "w": 390,
+      "x": 0,
+      "y": 1224
+    },
+    "C-Low.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "richtungen",
+      "radius": 44,
+      "title": "C · Papier & Ton – Low",
+      "w": 390,
+      "x": 470,
+      "y": 2448
+    },
+    "C-Start.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "richtungen",
+      "radius": 44,
+      "title": "C · Papier & Ton – Heute",
+      "w": 390,
+      "x": 0,
+      "y": 2448
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "richtungen",
+      "radius": 44,
+      "title": "A · Abendlicht – Heute",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "flow/Bereiche.dc.html": {
+      "h": 720,
+      "page": "flow",
+      "title": "3 · App-Bereiche",
+      "w": 1208,
+      "x": 0,
+      "y": 2120
+    },
+    "flow/Langfristig.dc.html": {
+      "h": 840,
+      "page": "flow",
+      "title": "4 · Langfristiger Mehrwert",
+      "w": 2984,
+      "x": 0,
+      "y": 3200
+    },
+    "flow/Onboarding.dc.html": {
+      "h": 720,
+      "page": "flow",
+      "title": "1 · Einstieg",
+      "w": 320,
+      "x": 0,
+      "y": 0
+    },
+    "flow/Ritual.dc.html": {
+      "h": 720,
+      "page": "flow",
+      "title": "2 · Abendritual (Kernflow)",
+      "w": 3280,
+      "x": 0,
+      "y": 1040
+    },
+    "proto/Vela-ES-B.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "prototyp",
+      "radius": 48,
+      "title": "Vela · Prototipo v1 · Variante B: texto arriba",
+      "w": 390,
+      "x": 1440,
+      "y": 0
+    },
+    "proto/Vela-ES.dc.html": {
+      "h": 1060,
+      "is_interactive": true,
+      "page": "prototyp",
+      "radius": 48,
+      "title": "Vela · Prototipo v1 (Español)",
+      "w": 390,
+      "x": 960,
+      "y": 0
+    },
+    "proto/Vela.dc.html": {
+      "h": 1060,
+      "is_interactive": true,
+      "page": "prototyp",
+      "radius": 48,
+      "title": "Vela · Prototyp v1 (Variante A Bienenwachs)",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "proto/Vela-ES-R.dc.html": {
+      "x": 1920,
+      "y": 0,
+      "w": 390,
+      "h": 1060,
+      "title": "Vela · Prototipo · Usuario recurrente (2.º, 3.º uso)",
+      "page": "prototyp",
+      "is_interactive": true,
+      "radius": 48
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-09T15:30:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "page": "prototyp",
+    "view": "canvas"
+  },
+  "noteOrder": [
+    "pT",
+    "pS",
+    "tA",
+    "sA",
+    "tB",
+    "sB",
+    "tC",
+    "sC",
+    "fT1",
+    "fL",
+    "fT2",
+    "fT3",
+    "fT4"
+  ],
+  "notes": {
+    "fL": {
+      "fill": "gray",
+      "page": "flow",
+      "size": 24,
+      "text": "Legende\n\nDurchgezogener Rahmen = Hauptweg\nGestrichelter Rahmen = optional oder bedingt\nPfeil = nächster Schritt\n\nNach dem Einstiegsscreen geht es direkt zum Anzünden: Docht halten, ein- und ausatmen, die Kerze geht an und das erste High beginnt (2.2–2.4). Die Erinnerung wird erst nach dem ersten Ritual angeboten (2.10). Sprechen ist voreingestellt, Tippen ist jederzeit möglich.",
+      "w": 380,
+      "x": 420,
+      "y": 0
+    },
+    "fT1": {
+      "kind": "title1",
+      "maxW": 900,
+      "page": "flow",
+      "text": "1 · Einstieg (einmalig)",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    },
+    "fT2": {
+      "kind": "title1",
+      "maxW": 3280,
+      "page": "flow",
+      "text": "2 · Abendritual · ca. 3–5 Minuten",
+      "w": 240,
+      "x": 0,
+      "y": 780
+    },
+    "fT3": {
+      "kind": "title1",
+      "maxW": 1208,
+      "page": "flow",
+      "text": "3 · App-Bereiche",
+      "w": 240,
+      "x": 0,
+      "y": 1860
+    },
+    "fT4": {
+      "kind": "title1",
+      "maxW": 2984,
+      "page": "flow",
+      "text": "4 · Langfristiger Mehrwert · über Wochen und Monate",
+      "w": 240,
+      "x": 0,
+      "y": 2940
+    },
+    "pS": {
+      "fill": "orange",
+      "page": "prototyp",
+      "size": 24,
+      "text": "So testest du\n\nPlay-Button am Artboard drücken.\n\n1. „Zünde dein erstes Licht an“\n2. Docht gedrückt halten: einatmen, ausatmen – die Kerze geht an\n3. High → Low → (Nachfrage) → zweites High: Mikrofon antippen zum Aufnehmen, nochmal zum Beenden – oder „Lieber tippen“\n4. Spiegel → Erinnerung → Ins Hier und Jetzt\n\nDie Dauer des Atemzugs lässt sich unter Tweaks einstellen (Standard 8 Sek.).\n\nUnter jedem Prototyp: Buttons, um direkt zu einem Screen zu springen.\n\nSprache wird im Prototyp nicht wirklich aufgenommen; der Spiegel nutzt dann Beispielsätze.",
+      "w": 400,
+      "x": 470,
+      "y": 0
+    },
+    "pT": {
+      "kind": "title1",
+      "maxW": 1300,
+      "page": "prototyp",
+      "text": "Vela · Prototyp v1",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    },
+    "sA": {
+      "fill": "orange",
+      "page": "richtungen",
+      "size": 24,
+      "text": "Abendlicht\n\nWarmer, dunkler Grund wie ein gedimmtes Zimmer. Ein Licht in der Mitte atmet und wird mit jedem Abend wärmer. Beim Low wird es kühler und blauer, aber nie dunkel.\n\nGefühl: geborgen, abendlich, schlaffreundlich.",
+      "w": 340,
+      "x": 940,
+      "y": 0
+    },
+    "sB": {
+      "fill": "green",
+      "page": "richtungen",
+      "size": 24,
+      "text": "Garten\n\nHelles Salbeigrün, gezeichnete Pflanze, die mit jedem Abend ein Blatt bekommt. Highs werden zu Knospen.\n\nGefühl: lebendig, frisch, wachsend.",
+      "w": 340,
+      "x": 940,
+      "y": 1224
+    },
+    "sC": {
+      "fill": "orange",
+      "page": "richtungen",
+      "size": 24,
+      "text": "Papier & Ton\n\nWarmes Papier, Tonfarben, handfeste Kiesel. Jeder Abend legt einen Stein auf einen kleinen Steinturm. Das Mikrofon ist selbst ein Kiesel.\n\nGefühl: erdend, ruhig, haptisch.",
+      "w": 340,
+      "x": 940,
+      "y": 2448
+    },
+    "tA": {
+      "kind": "title1",
+      "maxW": 860,
+      "page": "richtungen",
+      "text": "A · Abendlicht",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    },
+    "tB": {
+      "kind": "title1",
+      "maxW": 860,
+      "page": "richtungen",
+      "text": "B · Garten",
+      "w": 240,
+      "x": 0,
+      "y": 964
+    },
+    "tC": {
+      "kind": "title1",
+      "maxW": 860,
+      "page": "richtungen",
+      "text": "C · Papier & Ton",
+      "w": 240,
+      "x": 0,
+      "y": 2188
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "A-Low.dc.html",
+    "B-Start.dc.html",
+    "B-Low.dc.html",
+    "C-Start.dc.html",
+    "C-Low.dc.html",
+    "flow/Ritual.dc.html",
+    "flow/Onboarding.dc.html",
+    "flow/Bereiche.dc.html",
+    "flow/Langfristig.dc.html",
+    "proto/Vela.dc.html",
+    "proto/Vela-ES.dc.html",
+    "proto/Vela-ES-B.dc.html",
+    "proto/Vela-ES-R.dc.html"
+  ],
+  "pages": [
+    {
+      "id": "richtungen",
+      "name": "Visuelle Richtungen"
+    },
+    {
+      "id": "flow",
+      "name": "User Flow (Wireframe)"
+    },
+    {
+      "id": "prototyp",
+      "name": "Prototyp"
+    }
+  ],
+  "title": "Vela – Visuelle Richtungen & User Flow"
+}

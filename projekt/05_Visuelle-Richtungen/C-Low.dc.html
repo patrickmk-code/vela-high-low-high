@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Papier &amp; Ton – Low</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&amp;family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5A524C}a:hover{color:#2F2B29}
+@keyframes breatheCL{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.06) rotate(1deg)}}
+.breatheCL{animation:breatheCL 8s ease-in-out infinite}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #E9E6E2; color: #2F2B29; font-family: 'Manrope', sans-serif; display: flex; flex-direction: column; overflow: hidden">
+  <header style="display: flex; justify-content: space-between; align-items: center; padding: 56px 24px 0">
+    <a href="C-Start.dc.html" aria-label="Zurück" style="width: 44px; height: 44px; border-radius: 22px; background: #DDD8D2; color: #635B56; display: flex; align-items: center; justify-content: center">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <div aria-label="Schritt 2 von 3" style="display: flex; align-items: center; gap: 8px">
+      <span style="width: 12px; height: 9px; border-radius: 7px 5px 6px 5px; background: #D9A07E"></span>
+      <span style="width: 20px; height: 12px; border-radius: 10px 8px 9px 8px / 7px 6px 6px 6px; background: #6F665F"></span>
+      <span style="width: 12px; height: 9px; border-radius: 7px 5px 6px 5px; border: 1.5px solid #D9A07E; box-sizing: border-box"></span>
+    </div>
+    <div style="width: 44px; height: 44px"></div>
+  </header>
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding: 56px 32px 0">
+    <p style="margin: 0; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: #635B56">Low</p>
+    <h1 style="margin: 0; font-family: 'Young Serif', serif; font-weight: 400; font-size: 29px; line-height: 1.25">Und was war heute schwer?</h1>
+    <p style="margin: 0; font-size: 16px; color: #635B56; line-height: 1.5">Du kannst es einfach hier ablegen.</p>
+  </div>
+
+  <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px">
+    <div style="position: relative; width: 240px; height: 200px; display: flex; align-items: center; justify-content: center">
+      <div class="breatheCL" style="position: absolute; width: 220px; height: 160px; border-radius: 110px 96px 100px 120px / 84px 76px 80px 76px; background: #DDD7D0"></div>
+      <button aria-label="Aufnahme starten" style="position: relative; width: 130px; height: 100px; border: none; border-radius: 66px 58px 62px 70px / 52px 48px 50px 46px; background: #6F665F; color: #F4F1ED; display: flex; align-items: center; justify-content: center; cursor: pointer; transform: rotate(-3deg)">
+        <svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
+      </button>
+    </div>
+    <p style="margin: 0; font-size: 14px; color: #635B56">Tippe und erzähl einfach</p>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; padding: 0 32px 48px">
+    <a href="#" style="min-height: 44px; display: flex; align-items: center; font-size: 15px; font-weight: 700; text-decoration: none">Lieber schreiben</a>
+    <a href="#" style="min-height: 44px; display: flex; align-items: center; font-size: 15px; color: #635B56; text-decoration: none">Heute auslassen</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

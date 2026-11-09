@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Garten – Heute</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&amp;family=Figtree:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#4A6A4D}a:hover{color:#24302A}
+@keyframes swayB{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}
+.swayB{animation:swayB 9s ease-in-out infinite;transform-origin:50% 100%}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #EDEFE6; color: #24302A; font-family: 'Figtree', sans-serif; display: flex; flex-direction: column; overflow: hidden">
+  <header style="display: flex; justify-content: space-between; align-items: center; padding: 56px 24px 0">
+    <p style="margin: 0; font-size: 14px; color: #56635A">Montag, 9. November</p>
+    <button aria-label="Einstellungen" style="width: 44px; height: 44px; border-radius: 22px; border: none; background: #E1E5D8; color: #56635A; display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg>
+    </button>
+  </header>
+
+  <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; padding: 0 32px">
+    <div style="width: 240px; height: 250px; border-radius: 120px 120px 110px 130px / 130px 120px 120px 110px; background: #E1E5D8; display: flex; align-items: flex-end; justify-content: center">
+      <svg class="swayB" aria-hidden="true" width="200" height="230" viewBox="0 0 200 230" fill="none">
+        <ellipse cx="100" cy="216" rx="58" ry="6" fill="#CBD2BF"></ellipse>
+        <path d="M100 214 C 97 176, 104 134, 100 64" stroke="#5C7A5E" stroke-width="2.5" stroke-linecap="round"></path>
+        <path d="M100 176 C 74 168, 58 150, 60 128 C 84 132, 98 150, 100 176 Z" fill="#9DB59A"></path>
+        <path d="M100 146 C 128 138, 144 120, 142 98 C 116 102, 102 120, 100 146 Z" fill="#B7C9AE"></path>
+        <path d="M100 112 C 80 102, 72 84, 76 66 C 94 74, 102 92, 100 112 Z" fill="#9DB59A"></path>
+        <path d="M101 90 C 116 84, 124 72, 122 60 C 108 64, 101 74, 101 90 Z" fill="#C8D6BE"></path>
+        <circle cx="100" cy="58" r="8" fill="#E7C46F"></circle>
+      </svg>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+      <h1 style="margin: 0; font-family: 'Lora', serif; font-weight: 400; font-size: 32px; line-height: 1.22">Schön, dass du da bist.</h1>
+      <p style="margin: 0; font-size: 17px; color: #56635A; line-height: 1.5">Wie war dein Tag?</p>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 0 32px 32px">
+    <a href="B-Low.dc.html" style="width: 100%; box-sizing: border-box; height: 60px; border-radius: 30px; background: #4A6A4D; color: #F7F8F3; font-weight: 600; font-size: 17px; display: flex; align-items: center; justify-content: center; text-decoration: none">Tag abschließen</a>
+    <p style="margin: 0; font-size: 13px; color: #56635A">Mit jedem Abend wächst etwas.</p>
+  </div>
+
+  <nav aria-label="Hauptnavigation" style="display: flex; justify-content: space-around; padding: 12px 24px 34px; border-top: 1px solid #DDE2D3">
+    <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; min-height: 44px; color: #4A6A4D; text-decoration: none; font-size: 12px; font-weight: 600">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"></path></svg>
+      Heute
+    </a>
+    <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; min-height: 44px; color: #56635A; text-decoration: none; font-size: 12px">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v5h5"></path><path d="M12 8v4l3 2"></path></svg>
+      Rückblick
+    </a>
+    <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; min-height: 44px; color: #56635A; text-decoration: none; font-size: 12px">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"></path></svg>
+      Highs
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
