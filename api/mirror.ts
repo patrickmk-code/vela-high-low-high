@@ -1,5 +1,5 @@
 // POST /api/mirror – Vela spiegelt einen Moment in einem kurzen Satz („Lo que escuché“).
-import { MODEL, VELA_VOICE, client, errorResponse, json, readBody } from './_shared';
+import { MODEL, VELA_VOICE, client, errorResponse, json, readBody } from './_shared.js';
 
 type Step = 'high1' | 'low' | 'ask' | 'high2';
 

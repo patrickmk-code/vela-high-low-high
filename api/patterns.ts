@@ -1,7 +1,7 @@
 // POST /api/patterns – erkennt Kraftquellen, Energieräuber und kleine Impulse aus den eigenen Abenden.
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
-import { MODEL, VELA_VOICE, client, errorResponse, json, readBody } from './_shared';
+import { MODEL, VELA_VOICE, client, errorResponse, json, readBody } from './_shared.js';
 
 const Item = z.object({
   name: z.string().describe('Nombre corto del tema, 1-3 palabras, p. ej. «Naturaleza»'),
