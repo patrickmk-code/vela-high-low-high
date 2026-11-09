@@ -1,0 +1,6 @@
+{
+  "functions": {
+    "api/mirror.ts": { "maxDuration": 30 },
+    "api/patterns.ts": { "maxDuration": 120 }
+  }
+}

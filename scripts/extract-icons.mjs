@@ -15,6 +15,8 @@ const NAMES = [
   'fire-linear', 'notebook-linear', 'music-notes-linear', 'moon-sleep-linear',
   'alt-arrow-left-linear', 'alt-arrow-right-linear', 'alt-arrow-down-linear',
   'tuning-2-linear', 'restart-linear', 'star-linear', 'star-bold', 'hamburger-menu-linear',
+  'pause-bold', 'close-circle-linear', 'download-minimalistic-linear', 'calendar-add-linear',
+  'trash-bin-minimalistic-linear', 'smartphone-linear', 'refresh-linear', 'add-circle-linear',
 ];
 
 const out = {};
