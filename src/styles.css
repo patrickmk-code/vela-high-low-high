@@ -1,0 +1,124 @@
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { margin: 0; padding: 0; height: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  background: #2B2430;
+  color: #F5EFE4;
+  font-family: 'Nunito Sans', sans-serif;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+a { color: #F2B45A; }
+button { font-family: 'Nunito Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, textarea:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid #F2B45A; outline-offset: 3px; }
+textarea::placeholder, input::placeholder { color: rgba(205, 191, 174, 0.6); }
+/* iOS zoomt bei Inputs < 16px – Schrift im skalierten Stage bleibt dennoch klein genug */
+textarea, input { font-size: 16px; }
+
+/* Docht: kein Kontextmenü, keine Textauswahl, kein Scrollen bei Long-Press */
+.wick {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.stage, .stage * { -webkit-touch-callout: none; }
+.stage { user-select: none; -webkit-user-select: none; }
+.stage textarea, .stage input { user-select: text; -webkit-user-select: text; }
+
+/* --- Seitenlayout --- */
+.page-desktop {
+  min-height: 100%;
+  background: #EDEAE6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 40px;
+  gap: 18px;
+}
+.page-mobile {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #2B2430;
+}
+
+.testbar {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: 'Nunito Sans', sans-serif;
+}
+.testbar-title { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #6B5F57; }
+.testbar-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.jump {
+  height: 34px; padding: 0 14px; border-radius: 17px; border: 1px solid #D6D0C8;
+  background: #FFFFFF; color: #2B2430; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.jump[aria-pressed='true'] { background: #2B2430; color: #F5EFE4; border-color: #2B2430; }
+.testbar-links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: #6B5F57; }
+.testbar-links a { color: #6B5F57; }
+.credit { margin: 0; font-size: 11px; color: #8B7F77; }
+.credit a { color: inherit; }
+
+/* Mobile Sprungliste */
+.sheet-backdrop { position: fixed; inset: 0; background: rgba(14, 10, 13, 0.6); z-index: 20; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 21;
+  max-height: 80%; overflow-y: auto;
+  padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0;
+  background: #F5EFE4; color: #2B2430;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.sheet .credit { color: #6B5F57; }
+
+/* --- Animationen aus der Referenz --- */
+.flickA { animation: flick 3.2s ease-in-out infinite; transform-origin: 0px 0px; }
+@keyframes flick {
+  0%, 100% { transform: scale(1, 1) rotate(0deg); }
+  22% { transform: scale(0.96, 1.04) rotate(-1.5deg); }
+  48% { transform: scale(1.03, 0.97) rotate(1deg); }
+  74% { transform: scale(0.98, 1.03) rotate(-0.6deg); }
+}
+.breath { animation: br 8s ease-in-out infinite; }
+@keyframes br { 0%, 100% { transform: scale(.55); } 50% { transform: scale(1); } }
+.bin { animation: bin 8s ease-in-out infinite; }
+@keyframes bin { 0%, 45% { opacity: 1; } 50%, 95% { opacity: 0; } 100% { opacity: 1; } }
+.bout { animation: bout 8s ease-in-out infinite; }
+@keyframes bout { 0%, 45% { opacity: 0; } 50%, 95% { opacity: 1; } 100% { opacity: 0; } }
+.hintfinger { transform-origin: 15px 4px; opacity: 0; animation: hf 3.4s ease-in-out 1.4s 2 both; }
+@keyframes hf {
+  0% { opacity: 0; transform: translate(16px, 22px); }
+  22% { opacity: .8; transform: translate(0, 0); }
+  36% { opacity: .8; transform: translate(0, 0) scale(.9); }
+  64% { opacity: .8; transform: translate(0, 0) scale(.9); }
+  80% { opacity: .5; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(8px, 12px); }
+}
+.hintglow { opacity: 0; animation: hg 3.4s ease-in-out 1.4s 2 both; }
+@keyframes hg {
+  0%, 28% { opacity: 0; transform: scale(.6); }
+  48% { opacity: .8; transform: scale(1); }
+  66% { opacity: .6; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.3); }
+}
+.recbreath { animation: rb 3.2s ease-in-out infinite; }
+@keyframes rb { 0%, 100% { transform: scale(.9); opacity: .45; } 50% { transform: scale(1.12); opacity: 1; } }
+.thinkdot { width: 8px; height: 8px; border-radius: 4px; background: #CDBFAE; animation: td 1.4s ease-in-out infinite; }
+.thinkdot:nth-child(2) { animation-delay: .2s; }
+.thinkdot:nth-child(3) { animation-delay: .4s; }
+@keyframes td { 0%, 100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-4px); } }
+.fadehint { animation: fh 2.6s ease forwards; }
+@keyframes fh { 0% { opacity: 0; } 20% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .recbreath, .flickA, .breath, .thinkdot { animation: none; }
+  .hintfinger, .hintglow { animation: none; opacity: 0; }
+  .bin { animation: none; opacity: 1; }
+  .bout { animation: none; opacity: 0; }
+  .stage *, .stage { transition-duration: 0.01ms !important; }
+}
