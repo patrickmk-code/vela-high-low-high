@@ -1,17 +1,41 @@
 # Vela · High Low High
 
-Klickbarer, mobil-optimierter Web-Prototyp des Abendrituals „Vela · High Low High“ (Oberfläche auf Spanisch).
-Kein Backend, keine Accounts, keine echte KI – reiner Klickprototyp.
+Ein kleines Abendritual als App (Oberfläche auf Spanisch): Kerze anzünden, drei Momente erzählen – etwas Gutes, etwas Schweres, wieder etwas Gutes. Vela spiegelt jeden Moment in einem Satz zurück. Über die Zeit entstehen Kalender, Highs und Muster.
 
-## Einstiege
+## Was die App kann
 
-| URL | Was passiert |
+| Bereich | Funktion |
 |---|---|
-| `/` | Erstnutzung: Start bei „Hola, soy Vela.“ |
-| `/?modo=recurrente` | Wiederkehrende Nutzung: Sperrbildschirm mit Benachrichtigung → direkt zur Kerze, ohne Erinnerungsfrage |
-| `?respira=8` | Dauer des Atemzugs beim Anzünden in Sekunden (Standard 3), kombinierbar: `/?modo=recurrente&respira=8` |
+| Anzünden | Docht gedrückt halten, ein Atemzug (3/5/8 s in den Ajustes) |
+| Erzählen | **Einsprechen** (Spracherkennung Spanisch + Tonaufnahme) oder Tippen; „No lo sé“ mit Vorschlägen |
+| Spiegel | „Lo que escuché“: ein Satz von Claude in Velas Stimme; ohne Netz/Schlüssel eine Vorlage aus den eigenen Worten |
+| Tu día | Alle Momente des Abends, ergänzbar mit „+ Añadir“, Aufnahmen abspielbar, Atemübung |
+| Erinnerung | Abend-Erinnerung als Kalendereintrag (.ics, täglich, mit Hinweis) – funktioniert auf iPhone und Android ohne Server |
+| Resumen | Kalender mit echten Monaten, Tage mit Momenten, besondere Tage; **Patrones** ab 7 Abenden: Kraftquellen, Energieräuber, Ideen (Claude) |
+| Highs | „Lo que viene“ (Vorfreude mit Datum), „Lo que fue“ (alle Highs, abspielbar), „Hace un año“ |
+| Ajustes | Erinnerung, Hablar/Escribir, Atemdauer, Spotify, Export (JSON), alles löschen, Beispieldaten |
+| App | Installierbar (Home-Bildschirm), offline nutzbar (Service Worker) |
 
-Test-Hilfen: Neustart-Icon oben mittig; Sprungliste zu jedem Screen unter dem Telefon (Desktop) bzw. hinter „☰ Pantallas“ (Handy).
+**Datenschutz:** Alle Momente und Aufnahmen bleiben auf dem Gerät (localStorage + IndexedDB). An Claude geht nur Text – für den Spiegel und die Muster –, nie Audio.
+
+## Einrichtung des Claude-Schlüssels (einmalig)
+
+Ohne Schlüssel funktioniert alles, nur Spiegel und Muster nutzen dann Vorlagen bzw. sind nicht verfügbar.
+
+1. Auf https://console.anthropic.com einen API-Schlüssel erstellen.
+2. In Vercel: Projekt `vela-high-low-high` → **Settings → Environment Variables** → `ANTHROPIC_API_KEY` = Schlüssel (Production, Preview).
+3. **Deployments → … → Redeploy**, damit der Schlüssel aktiv wird.
+
+Kosten: ein Spiegel-Satz ist eine sehr kurze Anfrage; die Muster-Analyse läuft nur, wenn sich die Abende geändert haben.
+
+## Adressen
+
+| URL | Zweck |
+|---|---|
+| `/` | Die App |
+| `/?prueba=1` | Testmodus: Neustart-Knopf und Sprungliste zu allen Screens |
+| `/?modo=recurrente` | Demo des Einstiegs über die Abend-Benachrichtigung |
+| `?respira=8` | Atemdauer per URL überschreiben |
 
 ## Lokal starten
 
@@ -21,14 +45,11 @@ Voraussetzung: Node.js 20 oder neuer.
 npm i && npm run dev
 ```
 
-Dann die angezeigte Adresse öffnen (z. B. http://localhost:5173). Mit `npm run dev` ist die App auch im WLAN erreichbar, zum Testen auf dem Handy.
+`npm run dev` bedient auch `/api/*` lokal. Für echte Claude-Antworten vorher `export ANTHROPIC_API_KEY=…` setzen.
 
-## Deployment (Vercel)
+## Deployment
 
-Einmalig: auf vercel.com „Add New → Project“, dieses Repository importieren, „Deploy“. Vite wird automatisch erkannt
-(Build `npm run build`, Output `dist`). Danach geht jeder Push auf `main` automatisch live.
-
-Alternativ per CLI:
+Jeder Push auf `main` wird von Vercel automatisch gebaut und veröffentlicht. Manuell:
 
 ```bash
 npx vercel --prod
@@ -36,13 +57,23 @@ npx vercel --prod
 
 ## Aufbau
 
-- `src/App.tsx` – Ablauf, Zustände und alle Screens (Logik entspricht `renderVals()` der Referenz)
-- `src/Candle.tsx` – Kerze Variante A „Bienenwachs“, SVG 1:1 aus der Referenz
-- `src/data.ts` – Texte, Demo-Daten, Flammen-Parameter
-- `src/useLayout.ts` – Telefon-Rahmen am Desktop, Vollbild am Handy (kurze Screens werden sanft gestaucht)
-- `src/icons.generated.ts` – benötigte Solar-Icons, erzeugt mit `npm run icons`
+- `src/App.tsx` – Ablauf und alle Screens
+- `src/Candle.tsx` – Kerze Variante A „Bienenwachs“ (SVG aus der Referenz)
+- `src/lib/store.ts` – Datenmodell und lokale Speicherung
+- `src/lib/speech.ts` – Einsprechen (Web Speech API + MediaRecorder)
+- `src/lib/audio.ts` – Aufnahmen in IndexedDB, Abspielen
+- `src/lib/ai.ts` – Aufrufe von `/api/mirror` und `/api/patterns` mit Rückfall
+- `src/lib/reminder.ts` – Kalender-Erinnerung (.ics)
+- `api/mirror.ts`, `api/patterns.ts` – Vercel-Funktionen, rufen Claude (`claude-opus-5-5`) auf
+- `public/` – Manifest, Icons, Service Worker
 - `projekt/` – Konzept, Brief und Design-Referenzen
+
+## Grenzen
+
+- Spracherkennung braucht Chrome (Android/Desktop) oder Safari (iOS) und Internet. Firefox speichert nur die Aufnahme.
+- Echte Push-Benachrichtigungen gibt es nicht; die Erinnerung läuft über den Kalender.
+- Daten sind gerätegebunden. Auf dem iPhone sind Safari und die installierte App getrennte Speicher – am besten direkt die installierte App nutzen. Export sichert die Texte.
 
 ## Lizenzen
 
-Icons: [Solar Icon Set](https://www.figma.com/community/file/1166831539721848736) von 480 Design, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) – Namensnennung im Prototyp unter der Sprungliste.
+Icons: [Solar Icon Set](https://www.figma.com/community/file/1166831539721848736) von 480 Design, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
