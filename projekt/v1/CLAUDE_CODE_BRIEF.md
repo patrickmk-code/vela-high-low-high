@@ -2,16 +2,16 @@
 
 **Auftrag:** Baue aus diesem Brief einen klickbaren, mobil-optimierten Web-Prototyp der App **„Vela · High Low High“** (Oberflächensprache **Spanisch**), deploye ihn und gib mir **einen öffentlichen Link**, den ich teilen und auf dem Smartphone testen kann.
 
-Alles Nötige steht hier. Die funktionierenden Design-Prototypen liegen als **Referenz** in `reference/` (Abschnitt 14). Dort findest du exakte Markups, SVG-Pfade, Farben, Texte, Demo-Daten und Zustandslogik. **Bei Widersprüchen gilt die Referenz `reference/Vela-ES.dc.html`.**
+Alles Nötige steht hier. Die funktionierenden Design-Prototypen liegen als **Referenz** in `reference/` (Abschnitt 15). Dort findest du exakte Markups, SVG-Pfade, Farben, Texte, Demo-Daten und Zustandslogik. **Bei Widersprüchen gilt die Referenz `reference/proto/Vela-ES.dc.html`.**
 
-Stand: 10.11.2026 · Version: Prototipo v1
+Stand: 10.11.2026 (Abend) · Version: Prototipo v1
 
 ---
 
 ## 1. Ziel & Rahmen
 
 - **Klickprototyp, kein Produkt:** keine Accounts, kein Backend, keine echte KI und keine echte Spracherkennung. Zustand im Speicher, optional `localStorage`.
-- **Mobile first:** Zielgröße 390 × 844 (iPhone 14/15). Auf Desktop zentriert als Telefonrahmen (Radius 44 px) auf hellem Grund `#EDEAE6`. Darunter liegen die Test-Hilfen (Abschnitt 11).
+- **Mobile first:** Zielgröße 390 × 844 (iPhone 14/15). Auf Desktop zentriert als Telefonrahmen (Radius 44 px) auf hellem Grund `#EDEAE6`. Darunter liegen die Test-Hilfen (Abschnitt 13).
 - **Zwei Einstiege per URL:**
   - `/` → **Erstnutzung**, Start bei „Hola, soy Vela.“, Nächte = 0
   - `/?modo=recurrente` → **Wiederkehrend**, Start auf dem Sperrbildschirm mit Vela-Benachrichtigung, Tipp führt zur Kerze. Keine Erinnerungsfrage. Nächte = 3.
@@ -147,7 +147,7 @@ Erreichte Dinge leuchten **warm**, Kommendes leuchtet **lila**, Späteres ist **
 - **Datum und Mond hängen an den „Nächten“:** Datum = 9.11.2026 + N Tage, 21:30. Mondphase live berechnet: synodischer Monat 29.530588853 d, Referenz-Neumond 6.1.2000 18:14 UTC, Funktionen `moonPhase()` und `litPath19()` in der Referenz.
 - **Text unter der Kerze:** **„Qué bien que estés aquí.“** / „¿Cómo ha ido tu día?“ + Pille „Deja el dedo en la pantalla“.
 - Der Finger kann **irgendwo** auf dem Screen liegen. Die Fingergeste erscheint nur initial (2 Durchläufe).
-- **Ab 14 Nächten:** unten rechts über der Navbar die Pille **„Nuevo · Introspección, aquí abajo“** (lila Glas, leuchtender Punkt). Ein kleiner leuchtender **Stern fällt wiederholt** zum Dentro-Punkt der Navbar, der lila pulsiert. Tipp → Dentro.
+- **Ab 14 Nächten:** **horizontal zentriert** über der Navbar (Unterkante 116 px über dem Rand) die Pille **„Nuevo · Introspección, aquí abajo“** (lila Glas, leuchtender Punkt). Ein kleiner leuchtender **Stern gleitet wiederholt** (2.8 s) von der Mitte der Pille schräg nach rechts unten zum Dentro-Punkt der Navbar, der lila pulsiert. Tipp → Dentro.
 
 ### 7.3 Anzünden
 - Halten füllt einen Ring über **einen Atemzug** (Standard 8 s): erste Hälfte **„Inhala conmigo.“**, zweite **„Y exhala despacio.“**.
@@ -312,14 +312,21 @@ Hilfe ist **nie** hinter Nächten gesperrt.
 - „¿Qué sería para ti una vida buena, no perfecta?“
 - „Caminar te da calma. ¿Qué encuentras ahí que te falta en otros lugares?“
 
-## 12. Test-Hilfen (nur Prototyp)
+## 12. App-Icon & Favicon
+
+Entschieden ist **A1 · „Vela Gota“**: die handgemachte beige Kerze mit gepressten Farnen unter dem Sternenhimmel, mit runder Gota-Flamme. Details stehen in `reference/Vela_App-Icon.md`.
+
+- Die fertigen Dateien liegen im **separaten Paket `vela-icon-claude-code.zip`**. Darin: `public/` mit favicon.ico, apple-touch-icon.png, icons/ und manifest.webmanifest, außerdem eine README für den Einbau in Vite. Wenn es beiliegt, bitte genau so einbauen.
+- Fehlt es, setze zunächst ein einfaches SVG-Favicon (Flamme `#F2B45A` auf `#2B2430`) und nenne das in den offenen Punkten.
+
+## 13. Test-Hilfen (nur Prototyp)
 
 - **Neustart-Icon** oben links.
 - **Unter dem Telefon** (Desktop) bzw. hinter einem kleinen „☰“-Button (Mobil):
   - **„Ir directamente a“:** Inicio/Notificación, Mecha, High, Low, Pregunta, High 2, Tu día, Recordatorio, Opciones, Vela, Diario (Schreiben), Apagar, Highs, Patrones, Diario, Dentro. Springen setzt Timer, Aufnahme und Halten zurück.
   - **„Noches con Vela“:** 0 · 1 · 3 · 5 · 7 · 14 · 18 · 22 · 26 · 28 · 30. Das setzt die Patrones-Stufe (ab 14 Inhalt von Tag 14, Labels mit echter Zahl), Datum + Mondphase auf Hoy, Dentro ab 14 und setzt die Tagesfragen der Introspección zurück.
 
-## 13. Bewusst NICHT im Prototyp / Abnahme
+## 14. Bewusst NICHT im Prototyp / Abnahme
 
 **Nicht enthalten:**
 - echte Sprache und KI (Spiegel = Beispielsätze bzw. Vorlagen)
@@ -344,7 +351,7 @@ Hilfe ist **nie** hinter Nächten gesperrt.
 - Beispiel-URL `?noches=14`
 - kurze Liste offener Punkte
 
-## 14. Beigelegte Referenzen (`reference/`)
+## 15. Beigelegte Referenzen (`reference/`)
 
 Format der `.dc.html`-Dateien: „Design Component“, also HTML mit `{{ platzhaltern }}`, `<sc-if>` und `<sc-for>`; die Logik steckt in `class Component … renderVals()` im `<script type="text/x-dc">`. **Nicht direkt lauffähig**, aber Quelle für exakte SVGs, Texte, Farben, Daten (`STARS`, `DAYDATA`, `UPCOMING`, `INQ`, `INTH`, `SUPPORT`, `EN`) und Zustandslogik.
 
@@ -354,3 +361,4 @@ Format der `.dc.html`-Dateien: „Design Component“, also HTML mit `{{ platzha
 - `patrones/Introspeccion-14.dc.html` – frühe Einzelansicht Introspección; **maßgeblich ist Abschnitt 11 bzw. der Hauptprototyp**
 - `moon/Moon-D.dc.html` – Mondvariante D
 - `Vela_High-Low-High_Konzept.md` – Gesamtkonzept (Psychologie, Marke, Tone of Voice/Feel, Entscheidungen)
+- `Vela_App-Icon.md` – Entscheidung und Farben App-Icon (Abschnitt 12)

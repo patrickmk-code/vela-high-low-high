@@ -114,7 +114,7 @@ var STEPS = [
 ];
 var NIGHTS = 0;
 class Component extends DCLogic {
-  constructor(props) { super(props); this.state = { idx: 0, step: 0, seen: false, sel: 0, open: -1 }; this.x0 = null; }
+  constructor(props) { super(props); this.state = { idx: 0, step: 0, seen: false }; this.x0 = null; }
   go(i) { this.setState({ idx: (i + N) % N, seen: true }); }
   renderVals() {
     var self = this, st = this.state, idx = st.idx, last = idx === N - 1;

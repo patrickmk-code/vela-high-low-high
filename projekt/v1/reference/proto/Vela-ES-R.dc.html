@@ -57,8 +57,8 @@ button:focus-visible,textarea:focus-visible{outline:2px solid #F2B45A;outline-of
 .breathe{animation:brz 7s ease-in-out infinite}
 .stagein{animation:stagein 1s cubic-bezier(0.22,0.61,0.36,1) both}
 @keyframes stagein{0%{opacity:0;transform:translateY(16px) scale(.985);filter:blur(6px)}100%{opacity:1;transform:none;filter:blur(0)}}
-.starfall{animation:sfall 2.6s ease-in infinite}
-@keyframes sfall{0%{transform:translateY(0) scale(.6);opacity:0}20%{opacity:1}75%{transform:translateY(46px) scale(1);opacity:1}100%{transform:translateY(52px) scale(.4);opacity:0}}
+.starfall{animation:sfall 2.8s cubic-bezier(0.45,0,0.3,1) infinite}
+@keyframes sfall{0%{transform:translate(0,0) scale(.6);opacity:0}15%{opacity:1}75%{transform:translate(126px,46px) scale(1);opacity:1}100%{transform:translate(129px,50px) scale(.4);opacity:0}}
 @keyframes brz{0%,100%{transform:scale(.9);opacity:.55}50%{transform:scale(1.08);opacity:1}}
 @media (prefers-reduced-motion: reduce){.orb,.aurora,.aurora2,.qin,.breathe,.starfall,.stagein{animation:none}.twk,.mglow{animation:none}.recbreath{animation:none}.hintfinger,.hintglow{animation:none;opacity:0}.flickA,.recpulse,.breath{animation:none}.softin,.softin2,.tabin{animation:none}}
 </style>
@@ -1108,8 +1108,8 @@ button:focus-visible,textarea:focus-visible{outline:2px solid #F2B45A;outline-of
   </sc-if>
   <sc-if value="{{ showInHint }}" hint-placeholder-val="{{ false }}">
     <div aria-hidden="true" style="position: absolute; left: 300px; top: 764px; width: 48px; height: 48px; z-index: 6; pointer-events: none"><span class="orb" style="position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(237,227,248,0.55) 0%, rgba(201,182,228,0.15) 45%, rgba(201,182,228,0) 70%)"></span></div>
-    <span aria-hidden="true" class="starfall" style="position: absolute; left: 321px; top: 734px; width: 6px; height: 6px; border-radius: 3px; z-index: 6; background: #F4EEFF; box-shadow: 0 0 10px 3px rgba(220,205,245,0.9); pointer-events: none"></span>
-    <button type="button" onClick="{{ toInward }}" class="softin" style="position: absolute; right: 18px; bottom: 116px; z-index: 6; height: 38px; padding: 0 14px 0 10px; border-radius: 19px; border: 1px solid rgba(201,182,228,0.45); background: rgba(58,44,88,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #F4EEFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit; white-space: nowrap; box-shadow: 0 0 20px -4px rgba(201,182,228,0.6)">
+    <span aria-hidden="true" class="starfall" style="position: absolute; left: 192px; top: 734px; width: 6px; height: 6px; border-radius: 3px; z-index: 6; background: #F4EEFF; box-shadow: 0 0 10px 3px rgba(220,205,245,0.9); pointer-events: none"></span>
+    <button type="button" onClick="{{ toInward }}" class="softin" style="position: absolute; left: 0; right: 0; margin: 0 auto; width: max-content; bottom: 116px; z-index: 6; height: 38px; padding: 0 14px 0 10px; border-radius: 19px; border: 1px solid rgba(201,182,228,0.45); background: rgba(58,44,88,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #F4EEFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit; white-space: nowrap; box-shadow: 0 0 20px -4px rgba(201,182,228,0.6)">
       <span aria-hidden="true" class="orb" style="width: 8px; height: 8px; border-radius: 4px; background: #EDE3F8; box-shadow: 0 0 8px 2px rgba(201,182,228,0.8)"></span>Nuevo · Introspección, aquí abajo
     </button>
   </sc-if>
