@@ -664,7 +664,7 @@ export default function App() {
                 <p style={sx('margin: 0; font-size: 84px; font-weight: 300; line-height: 1; letter-spacing: -0.02em')}>{demo ? '21:30' : `${headDate.getHours()}:${pad(headDate.getMinutes())}`}</p>
               </div>
               <button type="button" onClick={() => go('home')} aria-label="Abrir notificación de Vela" style={sx(`position: absolute; left: 14px; right: 14px; top: ${T(300)}px; padding: 14px 16px; border-radius: 22px; border: 1px solid rgba(245,239,228,0.12); background: rgba(245,239,228,0.1); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); color: #F5EFE4; display: flex; gap: 12px; align-items: flex-start; text-align: left; cursor: pointer; font-family: inherit`)}>
-                <span aria-hidden="true" style={sx('width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; background: #2B2430; display: flex; align-items: center; justify-content: center')}><span style={sx('width: 10px; height: 16px; border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%; background: radial-gradient(circle at 50% 72%, #FFF1CF 0%, #F6C66E 45%, #F0A24E 100%)')} /></span>
+                <img src="/icons/icon-192.png" alt="" aria-hidden="true" width={38} height={38} style={sx('width: 38px; height: 38px; border-radius: 22%; flex-shrink: 0')} />
                 <span style={sx('display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1')}>
                   <span style={sx('display: flex; justify-content: space-between; font-size: 13px; color: #CDBFAE')}><span style={sx('font-weight: 700; letter-spacing: 0.04em')}>VELA</span><span>ahora</span></span>
                   <span style={sx('font-size: 15px; font-weight: 700')}>El día se va apagando.</span>

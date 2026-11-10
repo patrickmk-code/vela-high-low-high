@@ -1,6 +1,6 @@
 // Vela – Service Worker: App offline verfügbar. /api wird nie zwischengespeichert.
-const CACHE = 'vela-v3';
-const SHELL = ['/', '/manifest.webmanifest', '/favicon.svg', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'vela-v4';
+const SHELL = ['/', '/manifest.webmanifest', '/favicon.ico', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/apple-touch-icon.png'];
 
 // Beim Installieren die Startseite laden und alle darin verlinkten Build-Dateien (/assets/…) mitspeichern,
 // damit die App schon nach dem ersten Besuch offline startet.

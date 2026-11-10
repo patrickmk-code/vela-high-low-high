@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs><linearGradient id="night" x1="0" y1="1" x2="0" y2="0">
+  <stop offset="0" stop-color="#060509"/>
+  <stop offset=".22" stop-color="#140F1C"/>
+  <stop offset=".42" stop-color="#241D2E"/>
+  <stop offset=".62" stop-color="#231F3A"/>
+  <stop offset=".82" stop-color="#15132A"/>
+  <stop offset="1" stop-color="#0A0918"/>
+</linearGradient><radialGradient id="flameG" cx=".5" cy=".78" r=".75">
+  <stop offset="0" stop-color="#FFF8EA"/>
+  <stop offset=".35" stop-color="#F7E6C4"/>
+  <stop offset=".7" stop-color="#F2B45A"/>
+  <stop offset="1" stop-color="#E0913A"/>
+</radialGradient>
+<radialGradient id="halo" cx=".5" cy=".5" r=".5">
+  <stop offset="0" stop-color="#F2B45A" stop-opacity=".55"/>
+  <stop offset=".45" stop-color="#F2B45A" stop-opacity=".16"/>
+  <stop offset="1" stop-color="#F2B45A" stop-opacity="0"/>
+</radialGradient>
+<filter id="blur30" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="30"/></filter>
+<filter id="blur10" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="10"/></filter><linearGradient id="bodyA" x1="0" y1="0" x2="1" y2="0">
+  <stop offset="0" stop-color="#D2BE9E"/><stop offset=".28" stop-color="#F2E6D1"/>
+  <stop offset=".6" stop-color="#E7D7BC"/><stop offset="1" stop-color="#BFA987"/>
+</linearGradient>
+<linearGradient id="bodyShade" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#F6E3C0" stop-opacity=".35"/><stop offset=".5" stop-color="#000" stop-opacity="0"/>
+  <stop offset="1" stop-color="#0A0712" stop-opacity=".8"/>
+</linearGradient>
+<radialGradient id="room" cx=".5" cy=".52" r=".55">
+  <stop offset="0" stop-color="#F2B45A" stop-opacity=".34"/><stop offset="1" stop-color="#F2B45A" stop-opacity="0"/>
+</radialGradient>
+</defs><g fill="#F5EFE4">
+<path d="M352,1024 L352,630 Q352,604 380,600 L644,600 Q672,604 672,630 L672,1024Z"/>
+<path d="M513.6,328.0 C554.9,414.4 590.0,462.4 590.0,490.0 A78.0,78.0 0 0 1 434.0,490.0 C434.0,462.4 463.6,409.6 513.6,328.0Z"/></g></svg>
