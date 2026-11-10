@@ -1,6 +1,9 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { margin: 0; padding: 0; height: 100%; }
 html { background: #0A0918; }
+/* Seite selbst nie verschieben/federn – nur die Inhalte der Reiter scrollen */
+/* Seite nicht federn/verschieben – ohne overflow:hidden, das auf iOS am (zu kurz gemeldeten) Fensterrand abschneiden würde */
+html.is-mobile, html.is-mobile body { overscroll-behavior: none; touch-action: manipulation; }
 /* Falls irgendwo ein Rand bleibt: oben Himmelsfarbe, unten fast schwarz wie der Himmel unten */
 html, body { background: linear-gradient(to bottom, #0A0918 0%, #15132A 40%, #050409 100%) fixed #0A0918; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
@@ -43,9 +46,7 @@ textarea, input { font-size: 16px; }
 .page-mobile {
   position: fixed;
   top: 0; left: 0; right: 0;
-  bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
-  min-height: 100vh;
-  min-height: 100lvh;
+  /* Höhe setzt die App selbst (volle Bildschirmhöhe), damit iOS unten nichts abschneidet */
   overflow: hidden;
   background: linear-gradient(to bottom, #0A0918 0%, #050409 100%);
 }

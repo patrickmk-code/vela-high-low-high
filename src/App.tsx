@@ -380,6 +380,20 @@ export default function App() {
     });
   }, [demo, st.phase, doneCount, patternsFresh, st.patState, update]);
 
+  // Auf dem Handy: Seite selbst nicht verschiebbar (nur Reiter-Inhalte scrollen)
+  useEffect(() => {
+    document.documentElement.classList.toggle('is-mobile', layout.mobile);
+    if (!layout.mobile) return;
+    // Verschieben der ganzen Seite verhindern; scrollbare Bereiche (Reiter, Textfelder) bleiben frei
+    const block = (e: TouchEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && t.closest('.scroller, textarea, input, .sheet, [data-scroll]')) return;
+      if (e.cancelable) e.preventDefault();
+    };
+    document.addEventListener('touchmove', block, { passive: false });
+    return () => document.removeEventListener('touchmove', block);
+  }, [layout.mobile]);
+
   // Sperrbildschirm-Uhr
   useEffect(() => {
     if (st.phase !== 'lock') return;
@@ -550,7 +564,7 @@ export default function App() {
   // ---------- Tu día ----------
   const renderMirror = () => (
     <>
-      <div style={sx(`position: absolute; left: 24px; right: 24px; top: 96px; max-height: ${st.dayOpen ? Math.min(580, H - 220) : Math.min(300, H - 400)}px; overflow-y: auto; padding: 22px 22px 0 20px; border-radius: 26px; background: ${st.dayOpen ? 'rgba(40,33,48,0.97)' : 'linear-gradient(160deg, rgba(245,239,228,0.09) 0%, rgba(245,239,228,0.03) 100%)'}; -webkit-backdrop-filter: blur(16px) saturate(130%); backdrop-filter: blur(16px) saturate(130%); transition: max-height .7s ease, background .7s ease; border: 1px solid rgba(245,239,228,0.1); box-shadow: 0 24px 50px -24px rgba(0,0,0,0.6); z-index: 1`)}>
+      <div className="scroller" style={sx(`position: absolute; left: 24px; right: 24px; top: 96px; max-height: ${st.dayOpen ? Math.min(580, H - 220) : Math.min(300, H - 400)}px; overflow-y: auto; padding: 22px 22px 0 20px; border-radius: 26px; background: ${st.dayOpen ? 'rgba(40,33,48,0.97)' : 'linear-gradient(160deg, rgba(245,239,228,0.09) 0%, rgba(245,239,228,0.03) 100%)'}; -webkit-backdrop-filter: blur(16px) saturate(130%); backdrop-filter: blur(16px) saturate(130%); transition: max-height .7s ease, background .7s ease; border: 1px solid rgba(245,239,228,0.1); box-shadow: 0 24px 50px -24px rgba(0,0,0,0.6); z-index: 1`)}>
         <div style={sx('display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px')}>
           <h1 style={sx(H1 + '; font-size: 26px; line-height: 1')}>Tu día</h1>
           <p style={sx('margin: 0; font-size: 12px; letter-spacing: 0.04em; color: #CDBFAE')}>{cap(longLabel(dayKey))}</p>
@@ -888,7 +902,7 @@ export default function App() {
 
   if (mobile) {
     return (
-      <div className="page-mobile">
+      <div className="page-mobile" style={{ height: layout.H * k }}>
         <div style={{ width: W * k, height: layout.H * k }}>{stage}</div>
         {sheetOpen && (
           <>
