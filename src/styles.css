@@ -44,9 +44,10 @@ textarea, input { font-size: 16px; }
   gap: 18px;
 }
 .page-mobile {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  /* Höhe setzt die App selbst (volle Bildschirmhöhe), damit iOS unten nichts abschneidet */
+  /* Kein position:fixed – iOS schneidet fixierte Elemente in der installierten App an der
+     zu kurz gemeldeten Fenstergrenze ab. Ein normaler Block mit voller Bildschirmhöhe wird ganz gezeichnet. */
+  position: relative;
+  width: 100%;
   overflow: hidden;
   background: linear-gradient(to bottom, #0A0918 0%, #050409 100%);
 }

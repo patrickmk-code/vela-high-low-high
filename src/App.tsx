@@ -391,7 +391,19 @@ export default function App() {
       if (e.cancelable) e.preventDefault();
     };
     document.addEventListener('touchmove', block, { passive: false });
-    return () => document.removeEventListener('touchmove', block);
+    // Seite immer oben halten (außer während getippt wird – dann darf iOS das Feld hochschieben)
+    const keepTop = () => {
+      const ae = document.activeElement;
+      if (ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT')) return;
+      if (window.scrollY !== 0) window.scrollTo(0, 0);
+    };
+    window.addEventListener('scroll', keepTop, { passive: true });
+    document.addEventListener('focusout', keepTop);
+    return () => {
+      document.removeEventListener('touchmove', block);
+      window.removeEventListener('scroll', keepTop);
+      document.removeEventListener('focusout', keepTop);
+    };
   }, [layout.mobile]);
 
   // Sperrbildschirm-Uhr
