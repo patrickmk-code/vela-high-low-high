@@ -1,6 +1,8 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { margin: 0; padding: 0; height: 100%; }
 html { background: #0A0918; }
+/* Falls irgendwo ein Rand bleibt: oben Himmelsfarbe, unten fast schwarz wie der Himmel unten */
+html, body { background: linear-gradient(to bottom, #0A0918 0%, #15132A 40%, #050409 100%) fixed #0A0918; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   background: #0A0918;
@@ -40,9 +42,12 @@ textarea, input { font-size: 16px; }
 }
 .page-mobile {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0; right: 0;
+  bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+  min-height: 100vh;
+  min-height: 100lvh;
   overflow: hidden;
-  background: #0A0918;
+  background: linear-gradient(to bottom, #0A0918 0%, #050409 100%);
 }
 
 .testbar {

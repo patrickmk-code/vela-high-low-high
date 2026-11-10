@@ -31,7 +31,15 @@ function safeTop(): number {
 
 function measure(): Layout {
   const vw = window.innerWidth;
-  const vh = window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight;
+  const standalone = window.matchMedia?.('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
+  // iOS meldet in der installierten App mit durchsichtiger Statusleiste oft eine um die Statusleiste zu kleine Höhe.
+  // Deshalb: größten verfügbaren Wert nehmen, als App die volle Bildschirmhöhe – Hintergrund bis an beide Ränder.
+  let vh = Math.max(window.visualViewport ? Math.round(window.visualViewport.height) : 0, window.innerHeight, document.documentElement.clientHeight);
+  if (standalone) {
+    const portrait = window.innerHeight >= window.innerWidth;
+    const screenH = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    vh = Math.max(vh, screenH);
+  }
   const mobile = vw < 600 || (window.matchMedia('(pointer: coarse)').matches && vw < 900);
 
   if (!mobile) {
