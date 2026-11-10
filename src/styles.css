@@ -1,8 +1,9 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { margin: 0; padding: 0; height: 100%; }
+html { background: #0A0918; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
-  background: #2B2430;
+  background: #0A0918;
   color: #F5EFE4;
   font-family: 'Nunito Sans', sans-serif;
   overflow-x: hidden;
@@ -41,7 +42,7 @@ textarea, input { font-size: 16px; }
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: #2B2430;
+  background: #0A0918;
 }
 
 .testbar {

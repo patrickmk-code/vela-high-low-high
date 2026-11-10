@@ -429,7 +429,8 @@ export default function App() {
   const moon = moonPhase(headDate);
   const dateLabel = `${WEEKDAY_UP[headDate.getDay()]}, ${headDate.getDate()} de ${MONTHS[headDate.getMonth()]}`;
 
-  const { mobile, s: k, W, H, v } = layout;
+  const { mobile, s: k, W, v, inset } = layout;
+  const H = layout.H - inset; // nutzbare Höhe unter der Notch
   const T = (n: number) => Math.round(n * v);
   const colLeft = (W - 390) / 2;
   const glowPx = Math.round((glowY / 100) * 844 * v);
@@ -638,10 +639,10 @@ export default function App() {
   // ---------- Bühne (Telefon) ----------
   const stage = (
     <AppCtx.Provider value={ctx}>
-      <div className="stage" style={{ position: 'relative', width: W, height: H, overflow: 'hidden', borderRadius: mobile ? 0 : 44, background: bg, transition: 'background 1.6s ease', fontFamily: "'Nunito Sans', sans-serif", color: '#F5EFE4', transform: `scale(${k})`, transformOrigin: '0 0' }}>
+      <div className="stage" style={{ position: 'relative', width: W, height: layout.H, overflow: 'hidden', borderRadius: mobile ? 0 : 44, background: bg, transition: 'background 1.6s ease', fontFamily: "'Nunito Sans', sans-serif", color: '#F5EFE4', transform: `scale(${k})`, transformOrigin: '0 0' }}>
         {/* Nachthimmel mit Sternen */}
         <div aria-hidden="true" className="sky" style={sx(`position: absolute; inset: 0; background: linear-gradient(to top, #050409 0%, rgba(6,5,11,0.97) 8%, rgba(9,7,15,0.88) 16%, rgba(14,11,21,0.72) 24%, rgba(20,16,28,0.56) 32%, rgba(26,21,36,0.48) 40%, rgba(30,25,44,0.56) 47%, rgba(34,29,52,0.72) 54%, rgba(36,31,56,0.88) 61%, #231F3A 68%, #1C1931 76%, #15132A 84%, #0F0D21 92%, #0A0918 100%); opacity: ${skyOp}; transition: opacity 1.6s ease; pointer-events: none`)}>
-          <div style={{ position: 'absolute', left: colLeft, top: 0, width: 390, height: H }}>
+          <div style={{ position: 'absolute', left: colLeft, top: 0, width: 390, height: layout.H }}>
             {STARS.map((s, i) => (
               <span key={i} style={sx(`position: absolute; left: ${s.x}px; top: ${Math.round(s.y * v)}px; width: ${s.s}px; height: ${s.s}px; opacity: ${s.o}`)}>
                 <span className="twk" style={sx(`display: block; width: 100%; height: 100%; border-radius: 50%; background: #F7EEDC; box-shadow: 0 0 ${s.g}px rgba(247,238,220,0.6); animation-duration: ${s.d}s; animation-delay: ${s.dl}s`)} />
@@ -654,7 +655,7 @@ export default function App() {
         {ph === 'inward' && <div aria-hidden="true" style={sx(`position: absolute; left: 50%; top: ${T(250)}px; width: 420px; height: 420px; margin-left: -210px; border-radius: 50%; background: radial-gradient(circle, rgba(201,182,228,0.16) 0%, rgba(201,182,228,0) 65%); pointer-events: none`)} />}
         {ph === 'lock' && <div aria-hidden="true" style={sx('position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 0%, #3A3140 0%, #241E29 55%, #1A1620 100%)')} />}
 
-        <div style={{ position: 'absolute', left: colLeft, width: 390, top: 0, height: H }}>
+        <div style={{ position: 'absolute', left: colLeft, width: 390, top: inset, height: H }}>
           <Candle cfg={cfg} top={Math.round(CT[0] * v)} scale={r2(CT[1] * v * (showC ? 1 : 0.92))} opacity={showC && !st.leaving ? 1 : 0} ringOp={ph === 'lighting' ? 1 : 0} ringOff={Math.round((1 - prog) * 1000) / 1000} showWickHint={isHome && !isDone && nights < 3} />
 
           {ph === 'lock' && (
@@ -808,7 +809,7 @@ export default function App() {
 
         {/* Reiter (eigener Scroll) */}
         {isTab && (
-          <div key={ph} style={{ position: 'absolute', left: colLeft, width: 390, top: 0, height: H, opacity: st.leaving ? 0 : 1, transition: 'opacity .28s ease' }}>
+          <div key={ph} style={{ position: 'absolute', left: colLeft, width: 390, top: inset, height: H, opacity: st.leaving ? 0 : 1, transition: 'opacity .28s ease' }}>
             {ph === 'highs' && <Highs />}
             {ph === 'patterns' && <Patrones />}
             {ph === 'review' && <Diario />}
@@ -848,7 +849,7 @@ export default function App() {
         {/* Hinweis ab 14 Nächten: Introspección (Stern fällt zum Dentro-Punkt) */}
         {isHome && !isDone && five && !st.leaving && !data.inward.seen && (
           <>
-            <span aria-hidden="true" className="starfall" style={sx(`position: absolute; left: ${colLeft + 192}px; top: ${H - 110}px; width: 6px; height: 6px; border-radius: 3px; z-index: 8; background: #F4EEFF; box-shadow: 0 0 10px 3px rgba(220,205,245,0.9); pointer-events: none`)} />
+            <span aria-hidden="true" className="starfall" style={sx(`position: absolute; left: ${colLeft + 192}px; top: ${layout.H - 110}px; width: 6px; height: 6px; border-radius: 3px; z-index: 8; background: #F4EEFF; box-shadow: 0 0 10px 3px rgba(220,205,245,0.9); pointer-events: none`)} />
             <button type="button" onClick={() => tabGo('inward')} className="softin" style={sx(`position: absolute; left: 0; right: 0; margin: 0 auto; width: max-content; bottom: 116px; z-index: 6; height: 38px; padding: 0 14px 0 10px; border-radius: 19px; border: 1px solid rgba(201,182,228,0.45); background: rgba(58,44,88,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #F4EEFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit; white-space: nowrap; box-shadow: 0 0 20px -4px rgba(201,182,228,0.6)`)}>
               <span aria-hidden="true" className="orb" style={sx('width: 8px; height: 8px; border-radius: 4px; background: #EDE3F8; box-shadow: 0 0 8px 2px rgba(201,182,228,0.8)')} />Nuevo · Introspección, aquí abajo
             </button>
@@ -888,7 +889,7 @@ export default function App() {
   if (mobile) {
     return (
       <div className="page-mobile">
-        <div style={{ width: W * k, height: H * k }}>{stage}</div>
+        <div style={{ width: W * k, height: layout.H * k }}>{stage}</div>
         {sheetOpen && (
           <>
             <div className="sheet-backdrop" onClick={() => setSheetOpen(false)} />
@@ -904,7 +905,7 @@ export default function App() {
 
   return (
     <div className="page-desktop">
-      <div style={{ width: W * k, height: H * k, flexShrink: 0, borderRadius: 44 * k, boxShadow: '0 30px 80px -30px rgba(43,36,48,0.55)' }}>{stage}</div>
+      <div style={{ width: W * k, height: layout.H * k, flexShrink: 0, borderRadius: 44 * k, boxShadow: '0 30px 80px -30px rgba(43,36,48,0.55)' }}>{stage}</div>
       <div className="testbar">
         {TEST ? testTools : (
           <>
