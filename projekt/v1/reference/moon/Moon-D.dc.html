@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mondphase D · Mond oben rechts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&amp;family=Nunito+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#F2B45A}a:hover{color:#F5EFE4}
+.flk{animation:flk 3.2s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes flk{0%,100%{transform:scale(1,1) rotate(0)}30%{transform:scale(.96,1.04) rotate(-1.5deg)}60%{transform:scale(1.03,.97) rotate(1deg)}}
+.mglow{animation:mg 8s ease-in-out infinite}
+.twk{animation-name:twk;animation-timing-function:ease-in-out;animation-iteration-count:infinite}
+@keyframes twk{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes mg{0%,100%{opacity:.75}50%{opacity:1}}
+@media (prefers-reduced-motion: reduce){.flk,.mglow,.twk{animation:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 1100px; background: #EDEAE6; display: flex; flex-direction: column; gap: 18px; font-family: 'Nunito Sans', sans-serif">
+<div style="width: 390px; height: 844px; flex-shrink: 0; position: relative; overflow: hidden; border-radius: 44px; background: #2B2430; color: #F5EFE4">
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to top, #2B2430 0%, #2B2430 32%, #241F31 58%, #1B1829 80%, #141222 100%); pointer-events: none">
+    <sc-for list="{{ stars }}" as="sr" hint-placeholder-count="60">
+      <span style="position: absolute; left: {{ sr.x }}px; top: {{ sr.y }}px; width: {{ sr.s }}px; height: {{ sr.s }}px; opacity: {{ sr.o }}"><span class="twk" style="display: block; width: 100%; height: 100%; border-radius: 50%; background: #F7EEDC; box-shadow: 0 0 {{ sr.g }}px rgba(247,238,220,0.6); animation-duration: {{ sr.d }}s; animation-delay: {{ sr.dl }}s"></span></span>
+    </sc-for>
+  <div style="position: absolute; left: 35px; top: 275px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px">
+    <h1 style="margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 30px; line-height: 1.22">Qué bien que estés aquí.</h1>
+    
+    <p style="margin: -6px 0 0; font-size: 17px; line-height: 1.5; color: #CDBFAE">¿Cómo ha ido tu día?</p><p style="margin: 0; padding: 8px 16px; border-radius: 16px; background: rgba(245,239,228,0.07); font-size: 14px; color: #E6DACB">Deja el dedo en la pantalla</p>
+  </div></div>
+  <div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 0; height: 54px; pointer-events: none">
+    <span style="position: absolute; left: 34px; top: 17px; font-size: 15px; font-weight: 700; color: #F5EFE4; letter-spacing: 0.01em">21:30</span>
+    <span style="position: absolute; left: 50%; top: 11px; width: 124px; height: 36px; margin-left: -62px; border-radius: 18px; background: #000000"></span>
+    <span style="position: absolute; right: 32px; top: 19px; display: flex; gap: 5px; align-items: center">
+      <span style="display: flex; gap: 1.5px; align-items: flex-end"><span style="width: 3px; height: 4px; border-radius: 1px; background: #F5EFE4"></span><span style="width: 3px; height: 6px; border-radius: 1px; background: #F5EFE4"></span><span style="width: 3px; height: 8px; border-radius: 1px; background: #F5EFE4"></span><span style="width: 3px; height: 10px; border-radius: 1px; background: #F5EFE4"></span></span>
+      <span style="width: 22px; height: 11px; border-radius: 3px; border: 1px solid rgba(245,239,228,0.5); box-sizing: border-box; padding: 1px; display: flex"><span style="width: 70%; border-radius: 1.5px; background: #F5EFE4"></span></span>
+    </span>
+  </div>
+  <div style="position: absolute; top: 66px; left: 24px; right: 22px; display: flex; justify-content: space-between; align-items: center">
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <p style="margin: 0; font-size: 14px; color: #CDBFAE">Lunes, 9 de noviembre</p>
+      <p style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(205,191,174,0.7)">{{ demo.name }} · {{ demo.pct }}</p>
+    </div>
+    <button type="button" aria-label="{{ demo.name }}, {{ demo.pct }} iluminada" style="position: relative; width: 88px; height: 88px; border: none; padding: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <span class="mglow" aria-hidden="true" style="position: absolute; inset: -18px; border-radius: 50%; background: radial-gradient(circle, rgba(243,230,207,0.22) 0%, rgba(243,230,207,0.05) 50%, rgba(243,230,207,0) 72%); opacity: {{ demo.glow }}"></span>
+      <svg aria-hidden="true" width="78" height="78" viewBox="-22 -22 44 44" style="position: relative; overflow: visible">
+        <defs>
+          <radialGradient id="dSurf" cx="0.42" cy="0.38" r="0.75"><stop offset="0" stop-color="#FBF3E4"></stop><stop offset="0.6" stop-color="#E9DAC0"></stop><stop offset="1" stop-color="#CDB99B"></stop></radialGradient>
+          <clipPath id="dLit"><path d="{{ demo.d19 }}"></path></clipPath>
+          <filter id="dSoft" x="-0.2" y="-0.2" width="1.4" height="1.4"><feGaussianBlur stdDeviation="0.5"></feGaussianBlur></filter>
+        </defs>
+        <circle r="19" fill="rgba(243,230,207,0.06)" stroke="rgba(245,239,228,0.32)" stroke-width="0.5"></circle>
+        <g filter="url(#dSoft)"><path d="{{ demo.d19 }}" fill="url(#dSurf)"></path></g>
+        <g clip-path="url(#dLit)" fill="#B9A487"><circle cx="-5.1" cy="-6.6" r="3.3" opacity="0.28"></circle><circle cx="5.8" cy="-2.2" r="2.2" opacity="0.22"></circle><circle cx="1.5" cy="7.3" r="4" opacity="0.2"></circle><circle cx="9.5" cy="8" r="1.5" opacity="0.25"></circle><circle cx="-8.8" cy="5.1" r="1.8" opacity="0.2"></circle><circle cx="11" cy="-9.5" r="1.3" opacity="0.25"></circle></g>
+      </svg>
+    </button>
+  </div>
+  <div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 537px; height: 300px; transform: scale(0.9); transform-origin: 195px 0">
+    <div style="position: absolute; left: 75px; top: -30px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(242,180,90,0.4) 0%, rgba(242,180,90,0.1) 42%, rgba(242,180,90,0) 70%)"></div>
+    <div class="flk" style="position: absolute; left: 182px; top: 40px; width: 26px; height: 52px; border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%; background: radial-gradient(circle at 50% 72%, #FFF7E2 0%, #FFD68C 30%, #F2A64A 66%, rgba(242,140,60,0) 100%)"></div>
+    <div style="position: absolute; left: 194px; top: 88px; width: 3px; height: 12px; border-radius: 2px; background: #2E211D"></div>
+    <div style="position: absolute; left: 150px; top: 98px; width: 90px; height: 150px; border-radius: 14px 16px 10px 12px; background: linear-gradient(180deg, #D4A27C 0%, #AE785B 100%); box-shadow: inset 0 22px 22px -14px rgba(255,217,160,0.6)"></div>
+  </div>
+  
+  <nav aria-label="Navegación principal" style="position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-around; padding: 14px 24px 30px; border-top: 1px solid rgba(245,239,228,0.08)">
+    <span style="font-size: 12px; font-weight: 700; color: #F2B45A">Hoy</span><span style="font-size: 12px; color: #CDBFAE">Resumen</span><span style="font-size: 12px; color: #CDBFAE">Highs</span>
+  </nav>
+</div>
+<div style="padding: 0 20px 24px; display: flex; flex-direction: column; gap: 12px">
+  <p style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #6B5F57">Las 8 fases en este estilo</p>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+    <sc-for list="{{ strip }}" as="st" hint-placeholder-count="8">
+      <div style="height: 92px; border-radius: 16px; background: #2B2430; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px">
+        <svg aria-hidden="true" width="44" height="44" viewBox="-24 -24 48 48" style="overflow: visible"><circle r="22" fill="rgba(243,230,207,0.06)" stroke="rgba(245,239,228,0.35)" stroke-width="1"></circle><path d="{{ st.d22 }}" fill="url(#dSurf)"></path></svg>
+        <span style="font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #CDBFAE; text-align: center; padding: 0 4px">{{ st.name }}</span>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1100}}'>
+
+var NAMES = ['Luna nueva', 'Luna creciente', 'Cuarto creciente', 'Gibosa creciente', 'Luna llena', 'Gibosa menguante', 'Cuarto menguante', 'Luna menguante'];
+function litPath(p, r) {
+  var k = Math.cos(2 * Math.PI * p), rx = Math.round(Math.abs(k) * r * 100) / 100, illum = (1 - k) / 2;
+  if (illum < 0.02) return 'M0 0';
+  if (illum > 0.98) return 'M0 ' + (-r) + 'A' + r + ' ' + r + ' 0 1 1 0 ' + r + 'A' + r + ' ' + r + ' 0 1 1 0 ' + (-r) + 'Z';
+  if (p < 0.5) return 'M0 ' + (-r) + 'A' + r + ' ' + r + ' 0 0 1 0 ' + r + 'A' + rx + ' ' + r + ' 0 0 ' + (p < 0.25 ? 0 : 1) + ' 0 ' + (-r) + 'Z';
+  return 'M0 ' + (-r) + 'A' + r + ' ' + r + ' 0 0 0 0 ' + r + 'A' + rx + ' ' + r + ' 0 0 ' + (p > 0.75 ? 1 : 0) + ' 0 ' + (-r) + 'Z';
+}
+function dots(p) {
+  var out = [], n = 9, c = 4, kk = Math.cos(2 * Math.PI * p);
+  for (var yi = 0; yi < n; yi++) for (var xi = 0; xi < n; xi++) {
+    var x = (xi - c) / (c + 0.5), y = (yi - c) / (c + 0.5), rr = x * x + y * y, o = 0;
+    if (rr <= 1) { var h = Math.sqrt(1 - y * y), lit = p < 0.5 ? (x >= kk * h) : (x <= -kk * h); o = lit ? (0.95 - rr * 0.35) : 0.14; }
+    out.push({ o: Math.round(o * 100) / 100 });
+  }
+  return out;
+}
+function info(p) {
+  var illum = (1 - Math.cos(2 * Math.PI * p)) / 2;
+  return { p: p, name: NAMES[Math.floor(((p + 1 / 16) % 1) * 8)], pct: Math.round(illum * 100) + ' %', glow: Math.round((0.15 + illum * 0.85) * 100) / 100 };
+}
+var STARS = (function () {
+  var seed = 7, out = [];
+  function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+  for (var i = 0; i < 60; i++) {
+    var t = Math.pow(rnd(), 1.7), y = Math.round(t * 470), big = rnd() > 0.88;
+    out.push({ x: Math.round(rnd() * 386), y: y, s: big ? 2.2 : (rnd() > 0.5 ? 1.5 : 1),
+      o: Math.round((0.75 - t * 0.55) * 100) / 100, g: big ? 4 : 1.5,
+      d: Math.round((3 + rnd() * 5) * 10) / 10, dl: Math.round(rnd() * 6 * 10) / 10 });
+  }
+  return out;
+})();
+var DEMO = 0.36;
+var STRIP = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875];
+class Component extends DCLogic {
+  renderVals() {
+    var d = info(DEMO);
+    return {
+      stars: STARS,
+      demo: Object.assign(d, { dots: dots(DEMO), d10: litPath(DEMO, 10), d19: litPath(DEMO, 19), d52: litPath(DEMO, 52) }),
+      strip: STRIP.map(function (p) { var i = info(p); i.dots = dots(p); i.d10 = litPath(p, 10); i.d22 = litPath(p, 22); return i; })
+    };
+  }
+}
+</script>
+</body>
+</html>

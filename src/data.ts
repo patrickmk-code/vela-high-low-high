@@ -8,7 +8,7 @@ export type Phase =
   | 'lock' | 'intro' | 'home' | 'lighting' | 'lit'
   | InputPhase
   | 'mirror' | 'remind' | 'now' | 'stay' | 'journal' | 'blow' | 'sleep'
-  | 'review' | 'highs' | 'settings';
+  | 'review' | 'highs' | 'patterns' | 'inward' | 'settings';
 
 export interface InputDef {
   eb: string;
@@ -38,17 +38,19 @@ export const F: Partial<Record<Phase, [number, number, number, number]>> = {
   intro: [0, 0, 0.6, 0.25], home: [0, 0, 0.6, 0.25], lit: [1, 0, 1, 1],
   high1: [1.3, 0, 1.3, 1], low: [0.68, 0, 0.75, 0.55], ask: [0.68, 0, 0.75, 0.55], high2: [1.15, 0, 1.18, 1],
   mirror: [1, 0, 1, 1], remind: [1, 0, 1, 1], now: [1.2, 0, 1.5, 1], stay: [1.3, 0, 1.7, 1], blow: [1.3, 0, 1.7, 1],
-  journal: [1.2, 0, 1.6, 1], settings: [0, 0, 0.6, 0.2], sleep: [0, 0, 0.55, 0.15], review: [0, 0, 0.6, 0.2], highs: [0, 0, 0.6, 0.2],
+  journal: [1.2, 0, 1.6, 1], settings: [0, 0, 0.6, 0.2], patterns: [0, 0, 0.6, 0.2], inward: [0, 0, 0.6, 0.2], sleep: [0, 0, 0.55, 0.15], review: [0, 0, 0.6, 0.2], highs: [0, 0, 0.6, 0.2],
 };
 
 export const SUGG = ['Una pausa corta', 'Hablar con alguien', 'Tomar aire fuera', 'Decir que no a algo'];
 
 export const JUMPS_FIRST: [string, Phase][] = [
   ['Inicio', 'intro'], ['Mecha', 'home'], ['High', 'high1'], ['Low', 'low'], ['Pregunta', 'ask'], ['High 2', 'high2'],
-  ['Tu día', 'mirror'], ['Recordatorio', 'remind'], ['Opciones', 'now'], ['Vela', 'stay'], ['Diario', 'journal'],
-  ['Apagar', 'blow'], ['Resumen', 'review'], ['Highs', 'highs'],
+  ['Tu día', 'mirror'], ['Recordatorio', 'remind'], ['Opciones', 'now'], ['Vela', 'stay'], ['Diario (escribir)', 'journal'],
+  ['Apagar', 'blow'], ['Highs', 'highs'], ['Patrones', 'patterns'], ['Diario', 'review'], ['Dentro', 'inward'], ['Ajustes', 'settings'],
 ];
 export const JUMPS_RECURRING: [string, Phase][] = [['Notificación', 'lock'], ...JUMPS_FIRST.slice(1)];
+
+export const NIGHT_STEPS = [0, 1, 3, 5, 7, 14, 18, 22, 26, 28, 30];
 
 export const SPOTIFY_URL = 'https://open.spotify.com/search/piano%20tranquilo';
 

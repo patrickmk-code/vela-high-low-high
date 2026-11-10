@@ -17,6 +17,9 @@ const NAMES = [
   'tuning-2-linear', 'restart-linear', 'star-linear', 'star-bold', 'hamburger-menu-linear',
   'pause-bold', 'close-circle-linear', 'download-minimalistic-linear', 'calendar-add-linear',
   'trash-bin-minimalistic-linear', 'smartphone-linear', 'refresh-linear', 'add-circle-linear',
+  'target-linear', 'target-bold-duotone', 'calendar-linear', 'calendar-bold-duotone', 'heart-linear', 'soundwave-linear',
+  'settings-linear', 'lock-keyhole-minimalistic-linear', 'check-circle-linear', 'chat-round-line-linear', 'cloud-linear',
+  'users-group-rounded-linear', 'chart-2-linear', 'stars-linear', 'document-text-linear',
 ];
 
 const out = {};

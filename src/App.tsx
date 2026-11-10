@@ -1,78 +1,49 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { Candle, type CandleCfg } from './Candle';
 import { Icon } from './Icon';
 import { sx } from './sx';
 import { useLayout } from './useLayout';
-import { COOL, F, GOLD, IN, JUMPS_FIRST, JUMPS_RECURRING, SPOTIFY_URL, SUGG, isInputPhase, type InputPhase, type Phase } from './data';
-import { addDays, cap, clockLabel, inDays, keyOf, longLabel, monthName, monthShort, parseKey, relLabel, todayKey } from './lib/dates';
+import { COOL, F, GOLD, IN, JUMPS_FIRST, JUMPS_RECURRING, NIGHT_STEPS, SPOTIFY_URL, SUGG, isInputPhase, type InputPhase, type Phase } from './data';
+import { addDays, cap, keyOf, longLabel, parseKey, todayKey } from './lib/dates';
 import {
-  clearData, completedCount, emptyData, emptyDay, entriesForAnalysis, hasContent, loadData, patternSignature, saveData, uid, withSampleData,
-  type AppData, type DayEntry, type Moment, type PatternItem, type Via,
+  clearData, completedCount, emptyData, emptyDay, entriesForAnalysis, loadData, patternSignature, saveData, uid,
+  type AppData, type DayEntry, type Moment, type Via,
 } from './lib/store';
 import { clearAudio, deleteAudio, playAudio, saveAudio, stopAudio } from './lib/audio';
 import { VoiceCapture, sttSupported, voiceSupported, type VoiceError } from './lib/speech';
 import { analyzePatterns, mirror as mirrorAI } from './lib/ai';
 import { addReminderToCalendar, downloadFile } from './lib/reminder';
+import { STARS, moonPhase } from './lib/sky';
+import { AppCtx, type Answer, type Ctx, type DayKey, type UI } from './ctx';
+import { GHOST, ITALIC, PRIMARY, Spiral } from './ui';
+import { Patrones } from './screens/Patrones';
+import { Diario, Highs } from './screens/HighsDiario';
+import { Dentro, SupportSheet } from './screens/Dentro';
+import { Ajustes } from './screens/Ajustes';
 
 // ---------- Einstellungen über die URL ----------
 const params = new URLSearchParams(window.location.search);
 const RECURRING_DEMO = params.get('modo') === 'recurrente';
-const TEST = params.has('prueba') || RECURRING_DEMO;
+const URL_NOCHES = (() => {
+  if (!params.has('noches')) return null;
+  const n = Number(params.get('noches'));
+  return Number.isFinite(n) && n >= 0 && n <= 60 ? Math.round(n) : null;
+})();
+const TEST = params.has('prueba') || RECURRING_DEMO || URL_NOCHES != null;
 const URL_BREATH = (() => {
   const n = Number(params.get('respira'));
   return Number.isFinite(n) && n >= 1 && n <= 30 ? n : null;
 })();
-const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-const IS_STANDALONE = window.matchMedia?.('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
-
-type DayKey = 'high1' | 'low' | 'high2';
-type PatView = null | 'src' | 'drain' | 'more';
-
-interface Answer {
-  text: string;
-  via: Via;
-  audioId?: string;
-  seconds?: number;
-}
-
-interface UI {
-  phase: Phase;
-  prog: number;
-  typing: boolean;
-  rec: boolean;
-  recSec: number;
-  liveText: string;
-  breathing: boolean;
-  relight: boolean;
-  ritualDate: string | null;
-  answers: Record<InputPhase, Answer | null>;
-  mirrorText: Partial<Record<InputPhase, string>>;
-  mirrored: Record<InputPhase, boolean>;
-  reflecting: InputPhase | null;
-  askHelp: boolean;
-  notice: string | null;
-  adding: DayKey | null;
-  draft: string;
-  dayOpen: boolean;
-  revTab: 'cal' | 'pat';
-  selDay: string;
-  calMonth: [number, number];
-  patView: PatView;
-  patItem: number | null;
-  patState: 'idle' | 'loading' | 'error';
-  playing: string | null;
-  upOpen: boolean;
-  upTitle: string;
-  upDate: string;
-  confirmDelete: boolean;
-  toast: string | null;
-}
 
 const NO_ANSWERS = { high1: null, low: null, ask: null, high2: null };
 const NO_MIRRORED = { high1: false, low: false, ask: false, high2: false };
+const TABS: Phase[] = ['home', 'highs', 'patterns', 'review', 'inward'];
+const TAB_W: Partial<Record<Phase, number>> = { home: 92, highs: 104, patterns: 128, review: 108, inward: 112 };
+const TAB_LABEL: Partial<Record<Phase, string>> = { home: 'Hoy', highs: 'Highs', patterns: 'Patrones', review: 'Diario', inward: 'Dentro' };
 
 function initialPhase(d: AppData): Phase {
   if (RECURRING_DEMO) return 'lock';
+  if (URL_NOCHES != null && URL_NOCHES > 0) return 'home';
   return d.settings.onboarded ? 'home' : 'intro';
 }
 
@@ -80,20 +51,22 @@ function blankUI(d: AppData): UI {
   const t = todayKey();
   const td = parseKey(t);
   return {
-    phase: initialPhase(d), prog: 0, typing: false, rec: false, recSec: 0, liveText: '', breathing: false, relight: false, ritualDate: null,
+    phase: initialPhase(d), prog: 0, typing: false, rec: false, recSec: 0, liveText: '', breathing: false, relight: false, ritualDate: null, leaving: false,
     answers: { ...NO_ANSWERS }, mirrorText: {}, mirrored: { ...NO_MIRRORED }, reflecting: null, askHelp: false, notice: null,
-    adding: null, draft: '', dayOpen: false,
-    revTab: 'cal', selDay: t, calMonth: [td.getFullYear(), td.getMonth()], patView: null, patItem: null, patState: 'idle',
-    playing: null, upOpen: false, upTitle: '', upDate: addDays(t, 1), confirmDelete: false, toast: null,
+    adding: null, draft: '', dayOpen: false, selDay: t, calMonth: [td.getFullYear(), td.getMonth()],
+    patIdx: 0, patOpen: -1, patSel: 0, patState: 'idle', enAdding: '', enDraft: '', reflIdx: 0, supOpen: false,
+    inStage: 'home', inQ: 0, inAns: '', playing: null, speaking: false,
+    upOpen: false, upTitle: '', upDate: addDays(t, 1), confirmDelete: false, toast: null,
+    demoNights: URL_NOCHES ?? (RECURRING_DEMO ? 3 : null),
   };
 }
 
 const pad = (n: number) => (n < 10 ? '0' + n : '' + n);
 const r2 = (n: number) => Math.round(n * 100) / 100;
-const vibrate = (ms: number | number[]) => {
-  try { navigator.vibrate?.(ms); } catch { /* nicht unterstützt */ }
-};
+const vibrate = (ms: number | number[]) => { try { navigator.vibrate?.(ms); } catch { /* nicht unterstützt */ } };
 const momentLabel = (m: Moment) => m.text || (m.audioId ? 'Nota de voz' : '');
+const WEEKDAY_UP = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 const VOICE_MSG: Record<VoiceError, string> = {
   'sin-permiso': 'Vela no tiene permiso para usar el micrófono. Puedes activarlo en los ajustes del navegador, o escribir.',
@@ -101,29 +74,22 @@ const VOICE_MSG: Record<VoiceError, string> = {
   'no-soportado': 'Este navegador no permite hablar con Vela. Puedes escribirlo.',
 };
 
-// Wiederkehrende Stilbausteine
 const H1 = "margin: 0; font-family: 'Fraunces', serif; font-weight: 300";
 const BACK_BTN = 'width: 44px; height: 44px; border-radius: 22px; border: none; background: rgba(245,239,228,0.07); color: #CDBFAE; display: flex; align-items: center; justify-content: center; cursor: pointer';
-const LINK_BTN = 'min-height: 44px; padding: 0 16px; border: none; background: transparent; color: #E6DACB; font-size: 15px; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(230,218,203,0.4); cursor: pointer';
-const PRIMARY = 'width: 100%; height: 52px; border-radius: 26px; border: none; background: #F2B45A; color: #2B2430; font-size: 16px; font-weight: 700; cursor: pointer';
-const GHOST = 'height: 44px; padding: 0 18px; border-radius: 22px; border: 1px solid rgba(245,239,228,0.2); background: transparent; color: #E6DACB; font-size: 14px; cursor: pointer';
-const OPTION = 'width: 240px; height: 50px; border: none; border-bottom: 1px solid rgba(245,239,228,0.08); background: transparent; color: #E6DACB; font-size: 16px; letter-spacing: 0.01em; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; text-decoration: none';
+const LINK_BTN = 'min-height: 44px; padding: 0 16px; border: none; background: transparent; color: #E6DACB; font-size: 15px; cursor: pointer; font-family: inherit';
+const OPTION = 'width: 240px; height: 50px; border: none; border-bottom: 1px solid rgba(245,239,228,0.08); background: transparent; color: #E6DACB; font-size: 16px; letter-spacing: 0.01em; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; text-decoration: none; font-family: inherit';
 const EYEBROW = 'margin: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #CDBFAE';
-const SECTION = 'margin: 4px 0 0; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #CDBFAE';
-const CARD = 'padding: 18px; border-radius: 22px; background: rgba(245,239,228,0.05); display: flex; flex-direction: column; gap: 12px; flex-shrink: 0';
-const INPUT = "height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid rgba(245,239,228,0.2); background: rgba(245,239,228,0.05); color: #F5EFE4; font-family: 'Nunito Sans', sans-serif; font-size: 16px; min-width: 0";
-const ITALIC = "margin: 0; font-family: 'Fraunces', serif; font-style: italic; font-weight: 300";
+const INPUT = "height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid rgba(245,239,228,0.2); background: rgba(245,239,228,0.05); color: #F5EFE4; font-family: 'Nunito Sans', sans-serif; font-size: 16px; min-width: 0";
 
 export default function App() {
   const layout = useLayout();
-  const [data, setData] = useState<AppData>(loadData);
+  const [data, setDataRaw] = useState<AppData>(loadData);
   const [st, setSt] = useState<UI>(() => blankUI(data));
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [, setTick] = useState(0);
 
-  const stRef = useRef(st);
-  stRef.current = st;
-  const dataRef = useRef(data);
-  dataRef.current = data;
+  const stRef = useRef(st); stRef.current = st;
+  const dataRef = useRef(data); dataRef.current = data;
   const timers = useRef<number[]>([]);
   const recTimer = useRef<number | null>(null);
   const lightTimer = useRef<number | null>(null);
@@ -135,18 +101,18 @@ export default function App() {
   const firstSave = useRef(true);
   const starting = useRef(false);
   const stepAt = useRef(0);
-  const [, setTick] = useState(0);
 
   const update = useCallback((p: Partial<UI> | ((s: UI) => Partial<UI>)) => {
     setSt((s) => ({ ...s, ...(typeof p === 'function' ? p(s) : p) }));
   }, []);
+  const setData = useCallback((fn: (d: AppData) => AppData) => setDataRaw(fn), []);
+  const toast = useCallback((msg: string) => update({ toast: msg }), [update]);
 
   // ---------- Speichern ----------
   useEffect(() => {
     if (firstSave.current) { firstSave.current = false; return; }
     if (!saveData(data)) update({ toast: 'No se pudo guardar en este dispositivo.' });
   }, [data, update]);
-
   useEffect(() => {
     if (!st.toast) return;
     const t = window.setTimeout(() => update({ toast: null }), 3200);
@@ -156,42 +122,47 @@ export default function App() {
   const breathSeconds = URL_BREATH ?? data.settings.breathSeconds;
   const today = todayKey();
   const todayEntry: DayEntry | undefined = data.days[today];
-  // Ein Abend gehört zu dem Tag, an dem die Kerze angezündet wurde (auch wenn er nach 4 Uhr endet).
   const ritualDay = () => stRef.current.ritualDate ?? todayKey();
   const dayKey = st.ritualDate ?? today;
   const dayEntry: DayEntry | undefined = data.days[dayKey];
+  const demo = st.demoNights != null;
+  const nights = st.demoNights ?? completedCount(data);
 
   const later = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); };
   const clearRecTimer = () => { if (recTimer.current != null) { clearInterval(recTimer.current); recTimer.current = null; } };
   const cancelVoice = () => { voice.current?.cancel(); voice.current = null; clearRecTimer(); };
+  const stopSpeak = () => { try { window.speechSynthesis?.cancel(); } catch { /* egal */ } };
   const clearAll = () => {
-    cancelVoice();
-    stopAudio();
+    cancelVoice(); stopAudio(); stopSpeak();
     if (lightTimer.current != null) { clearInterval(lightTimer.current); lightTimer.current = null; }
     timers.current.forEach((t) => clearTimeout(t));
     timers.current = [];
     holding.current = false;
     progRef.current = 0;
   };
-
   useEffect(() => () => clearAll(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const go = (ph: Phase) => {
     stepAt.current = Date.now();
-    cancelVoice();
-    stopAudio();
+    cancelVoice(); stopAudio(); stopSpeak();
     const typingDefault = isInputPhase(ph) && dataRef.current.settings.prefer === 'texto' && !stRef.current.mirrored[ph];
-    update({ phase: ph, rec: false, liveText: '', typing: typingDefault, askHelp: false, dayOpen: false, patView: null, patItem: null, notice: null, adding: null, playing: null, upOpen: false, confirmDelete: false });
+    update({ phase: ph, rec: false, liveText: '', typing: typingDefault, askHelp: false, dayOpen: false, notice: null, adding: null, playing: null, speaking: false, upOpen: false, confirmDelete: false, patOpen: -1, patIdx: 0, enAdding: '', inStage: ph === 'inward' ? 'home' : stRef.current.inStage });
+  };
+  // Tabwechsel: Inhalt blendet 0.28 s aus, dann weich ein
+  const tabGo = (ph: Phase) => {
+    if (ph === stRef.current.phase || stRef.current.leaving) return;
+    update({ leaving: true });
+    later(() => { go(ph); update({ leaving: false }); document.querySelectorAll('.scroller').forEach((el) => { el.scrollTop = 0; }); }, 280);
   };
 
   // ---------- Daten schreiben ----------
   const updateDay = (date: string, fn: (e: DayEntry) => DayEntry) => {
-    setData((d) => {
+    setDataRaw((d) => {
       const e = d.days[date] ?? emptyDay(date);
       return { ...d, days: { ...d.days, [date]: { ...fn(e), updatedAt: Date.now() } } };
     });
   };
-  const setSettings = (patch: Partial<AppData['settings']>) => setData((d) => ({ ...d, settings: { ...d.settings, ...patch } }));
+  const setSettings = (patch: Partial<AppData['settings']>) => setDataRaw((d) => ({ ...d, settings: { ...d.settings, ...patch } }));
 
   const commitAnswer = (k: InputPhase, a: Answer, mirrorText: string) => {
     const id = committed.current[k] ?? uid();
@@ -204,7 +175,6 @@ export default function App() {
       return { ...e, [k]: list, mirrors: { ...e.mirrors, [k]: mirrorText } };
     });
   };
-
   const uncommit = (k: InputPhase) => {
     const id = committed.current[k];
     if (!id) return;
@@ -225,18 +195,14 @@ export default function App() {
     const s = stRef.current;
     const ctx = { high1: k !== 'high1' ? s.answers.high1?.text : undefined, low: k === 'ask' || k === 'high2' ? s.answers.low?.text : undefined };
     const res = await mirrorAI(k, a.text, ctx);
-    const wait = Math.max(0, 1400 - (Date.now() - started));
+    const wait = Math.max(0, 1600 - (Date.now() - started));
     later(() => {
       commitAnswer(k, a, res.text);
-      update((x) => ({
-        mirrorText: { ...x.mirrorText, [k]: res.text },
-        mirrored: { ...x.mirrored, [k]: true },
-        reflecting: x.reflecting === k ? null : x.reflecting,
-      }));
+      update((x) => ({ mirrorText: { ...x.mirrorText, [k]: res.text }, mirrored: { ...x.mirrored, [k]: true }, reflecting: x.reflecting === k ? null : x.reflecting }));
     }, wait);
   };
 
-  // ---------- Anzünden: Docht halten, ein Atemzug ----------
+  // ---------- Anzünden: Finger irgendwo auf dem Screen, ein Atemzug ----------
   const startTick = () => {
     if (lightTimer.current != null) return;
     lastTick.current = Date.now();
@@ -251,7 +217,7 @@ export default function App() {
         committed.current = { ...NO_ANSWERS };
         update({ prog: 1, phase: 'lit', answers: { ...NO_ANSWERS }, mirrorText: {}, mirrored: { ...NO_MIRRORED }, relight: false, ritualDate: todayKey() });
         vibrate(40);
-        later(() => { progRef.current = 0; update({ prog: 0 }); go('high1'); }, 1700);
+        later(() => { progRef.current = 0; update({ prog: 0 }); go('high1'); }, 2600);
         return;
       }
       if (p <= 0 && !holding.current) {
@@ -264,10 +230,10 @@ export default function App() {
       update({ prog: progRef.current });
     }, 40);
   };
-  const homeDone = (s: UI) => s.phase === 'home' && !!dataRef.current.days[todayKey()]?.done && !s.relight;
+  const homeDone = (s: UI) => s.phase === 'home' && !!dataRef.current.days[todayKey()]?.done && !s.relight && s.demoNights == null;
   const holdDown = () => {
     const s = stRef.current;
-    if (homeDone(s) || (s.phase !== 'home' && s.phase !== 'lighting')) return;
+    if (homeDone(s) || s.leaving || (s.phase !== 'home' && s.phase !== 'lighting')) return;
     if (!holding.current) vibrate(10);
     holding.current = true;
     if (s.phase === 'home') update({ phase: 'lighting' });
@@ -279,9 +245,7 @@ export default function App() {
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* egal */ }
     holdDown();
   };
-  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
-    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (!holding.current) holdDown(); }
-  };
+  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (!holding.current) holdDown(); } };
   const onKeyUp = (e: KeyboardEvent<HTMLButtonElement>) => { if (e.key === ' ' || e.key === 'Enter') holdUp(); };
 
   // ---------- Einsprechen ----------
@@ -294,33 +258,21 @@ export default function App() {
     update({ rec: false, reflecting: k });
     const res = await capture.stop();
     const text = res.transcript.trim();
-    if (!text && !res.audio) {
-      update({ reflecting: null, liveText: '', notice: 'No te he oído bien. ¿Lo intentas otra vez o prefieres escribir?' });
-      return;
-    }
+    if (!text && !res.audio) { update({ reflecting: null, liveText: '', notice: 'No te he oído bien. ¿Lo intentas otra vez o prefieres escribir?' }); return; }
     let audioId: string | undefined;
-    if (res.audio) {
-      const id = uid();
-      if (await saveAudio(id, res.audio)) audioId = id;
-    }
-    if (!text && !sttSupported()) {
-      update({ toast: 'Tu voz se ha guardado. Este navegador no transcribe; puedes añadir unas palabras en «Tu día».' });
-    }
+    if (res.audio) { const id = uid(); if (await saveAudio(id, res.audio)) audioId = id; }
+    if (!text && !sttSupported()) toast('Tu voz se ha guardado. Este navegador no transcribe; puedes añadir unas palabras en «Tu día».');
     update({ liveText: '' });
     reflect(k, { text, via: 'voz', audioId, seconds: res.seconds });
   };
-
   const toggleRec = async () => {
-    if (starting.current) return; // Freigabe läuft noch – Tipps ignorieren
+    if (starting.current) return;
     const s = stRef.current;
     if (s.rec) { stopRecording(); return; }
     if (!isInputPhase(s.phase)) return;
     stopAudio();
     const capture = new VoiceCapture(
-      {
-        onTranscript: (t) => update({ liveText: t }),
-        onError: (e) => { cancelVoice(); update({ rec: false, typing: true, notice: VOICE_MSG[e] }); },
-      },
+      { onTranscript: (t) => update({ liveText: t }), onError: (e) => { cancelVoice(); update({ rec: false, typing: true, notice: VOICE_MSG[e] }); } },
       () => { if (stRef.current.rec) stopRecording(); },
     );
     voice.current = capture;
@@ -328,12 +280,11 @@ export default function App() {
     update({ rec: true, recSec: 0, typing: false, liveText: '', notice: null });
     let ok = false;
     try { ok = await capture.start(); } finally { starting.current = false; }
-    if (voice.current !== capture) { capture.cancel(); return; } // Schritt inzwischen verlassen
+    if (voice.current !== capture) { capture.cancel(); return; }
     if (!ok) { voice.current = null; update({ rec: false }); return; }
     clearRecTimer();
     recTimer.current = window.setInterval(() => update((x) => ({ recSec: x.recSec + 1 })), 1000);
   };
-
   const doneTyping = (text: string) => {
     const k = stRef.current.phase;
     if (!isInputPhase(k) || !text.trim()) return;
@@ -348,16 +299,36 @@ export default function App() {
     update({ adding: null, draft: '' });
   };
   const play = async (audioId: string) => {
+    stopSpeak();
     if (stRef.current.playing === audioId) { stopAudio(); update({ playing: null }); return; }
-    update({ playing: audioId });
+    update({ playing: audioId, speaking: false });
     const ok = await playAudio(audioId, () => update({ playing: null }));
     if (!ok) update({ playing: null, toast: 'Esta grabación ya no está en el dispositivo.' });
+  };
+  const speak = (text: string) => {
+    const synth = window.speechSynthesis;
+    if (!synth) { toast('Este navegador no puede leer en voz alta.'); return; }
+    if (stRef.current.speaking) { synth.cancel(); update({ speaking: false }); return; }
+    stopAudio();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'es-ES'; u.rate = 0.9; u.pitch = 1;
+    const v = synth.getVoices().find((x) => x.lang.startsWith('es'));
+    if (v) u.voice = v;
+    u.onend = () => update({ speaking: false });
+    u.onerror = () => update({ speaking: false });
+    update({ speaking: true, playing: null });
+    synth.cancel(); synth.speak(u);
   };
   const jump = (ph: Phase) => {
     clearAll();
     setSheetOpen(false);
-    update({ prog: 0, reflecting: null, breathing: false, relight: false, ritualDate: null });
+    update({ prog: 0, reflecting: null, breathing: false, relight: false, ritualDate: null, leaving: false, supOpen: false });
     go(ph);
+  };
+  const setNights = (n: number) => {
+    setSheetOpen(false);
+    update((s) => ({ demoNights: n, patIdx: 0, patOpen: -1, patSel: 0, inStage: 'home', phase: n < 14 && s.phase === 'inward' ? 'patterns' : s.phase }));
+    setDataRaw((d) => ({ ...d, inward: { ...d.inward, done: 0, date: '' } }));
   };
   const reset = () => { clearAll(); committed.current = { ...NO_ANSWERS }; setSt(blankUI(dataRef.current)); };
   const blowOut = () => {
@@ -367,52 +338,46 @@ export default function App() {
   };
   const finishDay = () => {
     updateDay(ritualDay(), (e) => ({ ...e, done: true }));
-    go(dataRef.current.settings.remindAsked ? 'now' : 'remind');
+    go(dataRef.current.settings.remindAsked || RECURRING_DEMO ? 'now' : 'remind');
   };
-  const exportData = () => {
-    downloadFile(`vela-${todayKey()}.json`, JSON.stringify(dataRef.current, null, 2), 'application/json');
-  };
+  const exportData = () => downloadFile(`vela-${todayKey()}.json`, JSON.stringify(dataRef.current, null, 2), 'application/json');
   const deleteAll = async () => {
-    clearAll();
-    clearData();
-    await clearAudio();
+    clearAll(); clearData(); await clearAudio();
     const fresh = emptyData();
     committed.current = { ...NO_ANSWERS };
-    setData(fresh);
-    setSt(blankUI(fresh));
+    setDataRaw(fresh);
+    setSt({ ...blankUI(fresh), phase: 'intro', demoNights: null });
   };
 
-  // Uhr auf dem Sperrbildschirm aktuell halten
+  // ---------- Muster laden (Claude) ----------
+  const doneCount = completedCount(data);
+  const sig = patternSignature(data);
+  const patternsFresh = !!data.patterns && data.patterns.signature === sig;
+  useEffect(() => {
+    if (demo || st.phase !== 'patterns' || doneCount < 7 || patternsFresh || st.patState !== 'idle') return;
+    update({ patState: 'loading' });
+    analyzePatterns(entriesForAnalysis(dataRef.current)).then((r) => {
+      if (r.ok) {
+        setDataRaw((d) => ({ ...d, patterns: { signature: patternSignature(d), result: r.patterns, at: Date.now() } }));
+        update({ patState: 'idle' });
+      } else update({ patState: 'error' });
+    });
+  }, [demo, st.phase, doneCount, patternsFresh, st.patState, update]);
+
+  // Sperrbildschirm-Uhr
   useEffect(() => {
     if (st.phase !== 'lock') return;
     const t = window.setInterval(() => setTick((n) => n + 1), 15000);
     return () => clearInterval(t);
   }, [st.phase]);
 
-  // ---------- Muster laden ----------
-  const doneCount = completedCount(data);
-  const sig = patternSignature(data);
-  const patterns = data.patterns?.result ?? null;
-  const patternsFresh = !!data.patterns && data.patterns.signature === sig;
-  useEffect(() => {
-    if (st.phase !== 'review' || st.revTab !== 'pat' || doneCount < 7 || patternsFresh || st.patState !== 'idle') return;
-    update({ patState: 'loading' });
-    analyzePatterns(entriesForAnalysis(dataRef.current)).then((r) => {
-      if (r.ok) {
-        setData((d) => ({ ...d, patterns: { signature: patternSignature(d), result: r.patterns, at: Date.now() } }));
-        update({ patState: 'idle' });
-      } else {
-        update({ patState: 'error' });
-      }
-    });
-  }, [st.phase, st.revTab, doneCount, patternsFresh, st.patState, update]);
-
-  // ---------- Abgeleitete Werte (Kerze, Licht) ----------
+  // ---------- Abgeleitete Werte ----------
   const ph = st.phase;
   const prog = st.prog;
   const inputPh: InputPhase | null = isInputPhase(ph) ? ph : null;
   const isHome = ph === 'home';
-  const isDone = isHome && !!todayEntry?.done && !st.relight;
+  const isTab = ph === 'highs' || ph === 'patterns' || ph === 'review' || ph === 'inward' || ph === 'settings';
+  const isDone = isHome && !!todayEntry?.done && !st.relight && !demo;
   let f = F[ph] ?? F.home!;
   if (isDone) f = F.sleep!;
   let [scale, , halo, warmHalo] = f;
@@ -425,22 +390,26 @@ export default function App() {
     ember = Math.min(1, prog * 2);
   }
   const coolBg = ph === 'low' || ph === 'ask';
-  const cfg: CandleCfg = {
-    scale: r2(scale), fop: scale > 0.02 ? 1 : 0, halo: r2(halo),
-    warmHalo: r2(warmHalo * (1 - cool)), coolHalo: cool ? 1 : 0,
-    warmF: 1, goldF: 0, coolF: 0, ember: r2(ember), lightA: r2(lightA),
-  };
+  const cfg: CandleCfg = { scale: r2(scale), fop: scale > 0.02 ? 1 : 0, halo: r2(halo), warmHalo: r2(warmHalo * (1 - cool)), coolHalo: cool ? 1 : 0, ember: r2(ember), lightA: r2(lightA) };
   const warmBg = r2(Math.min(1, scale));
   const bg = ph === 'stay' || ph === 'sleep' || isDone ? '#211B26' : '#2B2430';
+  const skyOp = ph === 'stay' || ph === 'sleep' || ph === 'blow' ? 0.75 : 1;
 
-  const early = ph === 'intro' || (isHome && !isDone) || ph === 'lighting' || ph === 'lit';
+  let early = ph === 'intro' || (isHome && !isDone) || ph === 'lighting' || ph === 'lit';
+  if (isTab) early = !isDone;
   const bigPh = ph === 'stay' || ph === 'journal' || ph === 'blow' || ph === 'sleep';
-  const CT: [number, number] = early ? [150, 0.75] : bigPh ? [200, 1.3] : ph === 'now' ? [318, 1] : ph === 'mirror' || isDone ? [360, 0.55] : [280, 0.6];
+  const CT: [number, number] = early ? [150, 0.75] : bigPh ? [180, 1.3] : ph === 'now' ? [318, 1] : ph === 'mirror' || isDone ? [360, 0.55] : [280, 0.6];
   const glowY = early ? 41 : bigPh ? 62 : ph === 'now' ? 68 : ph === 'mirror' || isDone ? 58 : 51;
-  const showCandle = ph !== 'review' && ph !== 'highs' && ph !== 'lock' && ph !== 'settings';
-  const showNav = isHome || ph === 'review' || ph === 'highs';
-  const tabPh = ph === 'review' || ph === 'highs' ? ph : 'home';
+  const showC = !isTab && ph !== 'lock';
+  const showNav = isHome || ph === 'highs' || ph === 'patterns' || ph === 'review' || (ph === 'inward' && (st.inStage === 'home' || st.inStage === 'refl'));
+  const five = nights >= 14;
+  const canHold = (isHome && !isDone) || ph === 'lighting';
   const dotIdx = inputPh ? IN[inputPh].dot : -1;
+
+  // Datum + Mond hängen an den Nächten (Testmodus) bzw. am heutigen Tag
+  const headDate = demo ? new Date(2026, 10, 9 + nights, 21, 30) : new Date();
+  const moon = moonPhase(headDate);
+  const dateLabel = `${WEEKDAY_UP[headDate.getDay()]}, ${headDate.getDate()} de ${MONTHS[headDate.getMonth()]}`;
 
   const { mobile, s: k, W, H, v } = layout;
   const T = (n: number) => Math.round(n * v);
@@ -452,34 +421,25 @@ export default function App() {
     const low = key === 'low';
     const items: Moment[] = e ? [...e[key]] : [];
     const extra: Moment[] = low && e ? e.ask.map((m) => ({ ...m, text: m.text ? 'Te habría ayudado: ' + m.text : '' })) : [];
-    return {
-      key, low, label: low ? 'Low' : 'High', fill: low ? 'transparent' : GOLD, ring: low ? '#CDBFAE' : GOLD, glow: low ? 0 : 8,
-      items: [...items, ...extra].filter((m) => momentLabel(m)),
-    };
+    return { key, low, label: low ? 'Low' : 'High', fill: low ? 'transparent' : GOLD, ring: low ? '#CDBFAE' : GOLD, glow: low ? 0 : 8, items: [...items, ...extra].filter((m) => momentLabel(m)) };
   });
   const todaySections = sections(dayEntry);
-  const doneSections = sections(todayEntry);
+  const doneLines = sections(todayEntry).filter((s) => s.items.length).map((s) => ({ ring: s.ring, text: momentLabel(s.items[0]) }));
   const itemCount = todaySections.reduce((n, s) => n + s.items.length, 0);
 
   const playBtn = (id: string, size = 30) => (
-    <button
-      type="button"
-      aria-label={st.playing === id ? 'Pausar' : 'Escuchar tu voz'}
-      onClick={(e) => { e.stopPropagation(); play(id); }}
-      style={sx(`width: ${size}px; height: ${size}px; border-radius: ${size / 2}px; border: 1.5px solid rgba(245,239,228,0.4); background: transparent; color: #F5EFE4; flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0`)}
-    >
+    <button type="button" aria-label={st.playing === id ? 'Pausar' : 'Escuchar tu voz'} onClick={(e) => { e.stopPropagation(); play(id); }}
+      style={sx(`width: ${size}px; height: ${size}px; border-radius: ${size / 2}px; border: 1.5px solid rgba(230,205,163,0.45); background: rgba(230,205,163,0.08); color: #F6E3C0; flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0`)}>
       <Icon name={st.playing === id ? 'pause-bold' : 'play-bold'} size={Math.round(size * 0.42)} />
     </button>
   );
-
-  // Tipps kurz nach einem Schrittwechsel ignorieren (verhindert versehentliche Doppeltipps)
   const guard = (fn: () => void) => () => { if (Date.now() - stepAt.current < 450) return; fn(); };
 
   // ---------- Erzähl-Screens ----------
   const renderInput = () => {
     if (!inputPh) return null;
     const d = IN[inputPh];
-    const accent = coolBg ? COOL : GOLD;
+    const accent = coolBg ? COOL : '#E6CDA3';
     const answer = st.answers[inputPh];
     const mirrored = st.mirrored[inputPh];
     const refl = st.reflecting === inputPh;
@@ -489,34 +449,26 @@ export default function App() {
     const showTyping = st.typing && !mirrored && !refl;
     const showMirror = mirrored && !refl;
     const canVoice = voiceSupported();
+    const soft = coolBg ? '159,180,200' : '230,205,163';
     return (
       <>
-        <div style={sx('position: absolute; left: 32px; right: 32px; top: 112px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px')}>
+        <div className="softin2" style={sx('position: absolute; left: 32px; right: 32px; top: 112px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px')}>
           {d.eb && <p style={sx('margin: 0; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: #CDBFAE')}>{d.eb}</p>}
           <h1 style={sx(H1 + '; font-size: 28px; line-height: 1.25')}>{d.t}</h1>
           <p style={sx('margin: 0; font-size: 15px; line-height: 1.55; color: #CDBFAE')}>{d.s}</p>
         </div>
-        <div style={sx('position: absolute; left: 28px; right: 28px; bottom: 40px; display: flex; flex-direction: column; align-items: center; gap: 18px')}>
-          {st.notice && (idle || showTyping) && (
-            <p role="status" style={sx('margin: 0; padding: 10px 14px; border-radius: 16px; background: rgba(245,239,228,0.07); font-size: 13px; line-height: 1.45; color: #E6DACB; text-align: center')}>{st.notice}</p>
-          )}
+        <div className="softin2" style={sx('position: absolute; left: 28px; right: 28px; bottom: 40px; display: flex; flex-direction: column; align-items: center; gap: 18px')}>
+          {st.notice && (idle || showTyping) && <p role="status" style={sx('margin: 0; padding: 10px 14px; border-radius: 16px; background: rgba(245,239,228,0.07); font-size: 13px; line-height: 1.45; color: #E6DACB; text-align: center')}>{st.notice}</p>}
           {showMic && canVoice && (
             <>
               <div style={sx('position: relative; width: 92px; height: 92px')}>
-                {st.rec && <span className="recbreath" style={sx(`position: absolute; left: -22px; top: -22px; width: 136px; height: 136px; border-radius: 50%; background: radial-gradient(circle, ${coolBg ? 'rgba(159,180,200,0.35)' : 'rgba(242,180,90,0.35)'} 0%, rgba(43,36,48,0) 70%)`)} />}
-                <button
-                  type="button"
-                  aria-label={st.rec ? 'Detener grabación' : 'Iniciar grabación'}
-                  aria-pressed={st.rec}
-                  onClick={guard(toggleRec)}
-                  style={sx(`position: relative; width: 92px; height: 92px; border-radius: 46px; border: 1.5px solid ${accent}; background: ${st.rec ? accent : coolBg ? 'rgba(159,180,200,0.12)' : 'rgba(242,180,90,0.12)'}; color: ${st.rec ? '#2B2430' : accent}; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .8s ease, color .8s ease`)}
-                >
+                {st.rec && <span className="recbreath" style={sx(`position: absolute; left: -22px; top: -22px; width: 136px; height: 136px; border-radius: 50%; background: radial-gradient(circle, rgba(${soft},0.35) 0%, rgba(43,36,48,0) 70%)`)} />}
+                <button type="button" aria-label={st.rec ? 'Detener grabación' : 'Iniciar grabación'} aria-pressed={st.rec} onClick={guard(toggleRec)}
+                  style={sx(`position: relative; width: 92px; height: 92px; border-radius: 46px; border: 1.5px solid ${accent}; background: ${st.rec ? accent : `rgba(${soft},0.12)`}; color: ${st.rec ? '#2B2430' : accent}; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .8s ease, color .8s ease`)}>
                   {st.rec ? <span style={sx('width: 20px; height: 20px; border-radius: 5px; background: #2B2430')} /> : <Icon name="microphone-3-linear" size={32} />}
                 </button>
               </div>
-              <p role={st.rec ? 'status' : undefined} style={sx('margin: 0; font-size: 14px; color: #CDBFAE')}>
-                {st.rec ? `Te escucho … ${Math.floor(st.recSec / 60)}:${pad(st.recSec % 60)}` : 'Toca y cuéntamelo'}
-              </p>
+              <p role={st.rec ? 'status' : undefined} style={sx('margin: 0; font-size: 14px; color: #CDBFAE')}>{st.rec ? `Te escucho … ${Math.floor(st.recSec / 60)}:${pad(st.recSec % 60)}` : 'Toca y cuéntamelo'}</p>
               {st.rec ? (
                 <p data-testid="transcripcion" aria-live="polite" style={sx(`${ITALIC}; min-height: 44px; max-height: 44px; overflow: hidden; font-size: 15px; line-height: 1.45; color: #E6DACB; text-align: center; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical`)}>
                   {st.liveText ? '… ' + st.liveText.split(' ').slice(-14).join(' ') : ''}
@@ -527,7 +479,7 @@ export default function App() {
                   {inputPh === 'ask' && (
                     <>
                       <span aria-hidden="true" style={sx('color: rgba(205,191,174,0.5)')}>·</span>
-                      <button type="button" onClick={guard(() => { cancelVoice(); update({ askHelp: true, typing: false, notice: null }); })} style={sx('min-height: 44px; padding: 0 12px; border: none; background: transparent; color: #CDBFAE; font-size: 15px; cursor: pointer')}>No lo sé</button>
+                      <button type="button" onClick={guard(() => { cancelVoice(); update({ askHelp: true, typing: false, notice: null }); })} style={sx('min-height: 44px; padding: 0 12px; border: none; background: transparent; color: #CDBFAE; font-size: 15px; cursor: pointer; font-family: inherit')}>No lo sé</button>
                     </>
                   )}
                 </div>
@@ -536,7 +488,7 @@ export default function App() {
           )}
           {idle && !canVoice && (
             <>
-              <button type="button" onClick={() => update({ typing: true })} style={sx(PRIMARY)}>Escribirlo</button>
+              <button type="button" onClick={() => update({ typing: true })} style={sx(PRIMARY + '; width: 100%')}>Escribirlo</button>
               {inputPh === 'ask' && <button type="button" onClick={() => update({ askHelp: true })} style={sx(LINK_BTN)}>No lo sé</button>}
             </>
           )}
@@ -544,11 +496,9 @@ export default function App() {
             <>
               <p style={sx('margin: 0; font-size: 15px; line-height: 1.5; color: #E6DACB; text-align: center')}>Está bien no saberlo. Quizás algo de esto:</p>
               <div style={sx('display: flex; flex-wrap: wrap; gap: 8px; justify-content: center')}>
-                {SUGG.map((lab) => (
-                  <button key={lab} type="button" onClick={() => reflect('ask', { text: lab, via: 'sugerencia' })} style={sx('height: 42px; padding: 0 18px; border-radius: 21px; border: 1px solid rgba(245,239,228,0.22); background: rgba(245,239,228,0.05); color: #F5EFE4; font-size: 14px; cursor: pointer')}>{lab}</button>
-                ))}
+                {SUGG.map((lab) => <button key={lab} type="button" onClick={() => reflect('ask', { text: lab, via: 'sugerencia' })} style={sx('height: 42px; padding: 0 18px; border-radius: 21px; border: 1px solid rgba(245,239,228,0.22); background: rgba(245,239,228,0.05); color: #F5EFE4; font-size: 14px; cursor: pointer; font-family: inherit')}>{lab}</button>)}
               </div>
-              <button type="button" onClick={() => d.skipTo && go(d.skipTo)} style={sx(LINK_BTN + '; color: #CDBFAE; text-decoration-color: rgba(205,191,174,0.4)')}>Seguir sin respuesta</button>
+              <button type="button" onClick={() => d.skipTo && go(d.skipTo)} style={sx(LINK_BTN + '; color: #CDBFAE; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(205,191,174,0.4)')}>Seguir sin respuesta</button>
             </>
           )}
           {showTyping && <TypingBox key={inputPh} label={d.t} accent={accent} initial={answer?.via === 'texto' ? answer.text : ''} onDone={doneTyping} onSpeak={canVoice ? () => update({ typing: false, notice: null }) : undefined} onDontKnow={inputPh === 'ask' ? () => update({ typing: false, askHelp: true }) : undefined} />}
@@ -560,7 +510,7 @@ export default function App() {
           )}
           {showMirror && (
             <>
-              <div style={sx(`width: 100%; padding: 18px 20px; border-radius: 22px; border: 1px solid ${coolBg ? 'rgba(159,180,200,0.32)' : 'rgba(242,180,90,0.32)'}; background: rgba(52,44,58,0.9); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: flex; flex-direction: column; gap: 8px`)}>
+              <div style={sx(`width: 100%; padding: 18px 20px; border-radius: 22px; border: 1px solid ${coolBg ? 'rgba(159,180,200,0.32)' : 'rgba(242,180,90,0.32)'}; background: rgba(40,33,48,0.82); -webkit-backdrop-filter: blur(16px) saturate(130%); backdrop-filter: blur(16px) saturate(130%); display: flex; flex-direction: column; gap: 8px`)}>
                 <div style={sx('display: flex; justify-content: space-between; align-items: center; gap: 10px')}>
                   <p style={sx('margin: 0; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #CDBFAE')}>Lo que escuché</p>
                   {answer?.audioId && playBtn(answer.audioId, 28)}
@@ -568,12 +518,8 @@ export default function App() {
                 <p data-testid="mirror-text" style={sx("margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 19px; line-height: 1.45; color: #F5EFE4")}>{st.mirrorText[inputPh]}</p>
               </div>
               <div style={sx('display: flex; gap: 16px; justify-content: center; align-items: center')}>
-                <button
-                  type="button"
-                  onClick={() => { stopAudio(); uncommit(inputPh); update((s) => ({ answers: { ...s.answers, [inputPh]: null }, mirrored: { ...s.mirrored, [inputPh]: false }, typing: dataRef.current.settings.prefer === 'texto', askHelp: false, playing: null })); }}
-                  style={sx('min-height: 48px; padding: 0 14px; border: none; background: transparent; color: #E6DACB; font-size: 15px; cursor: pointer')}
-                >Repetir</button>
-                <button type="button" onClick={guard(() => go(d.next))} style={sx(`height: 48px; min-width: 160px; padding: 0 32px; border-radius: 24px; border: 1px solid ${accent}; background: ${accent}; color: #2B2430; font-size: 15px; font-weight: 700; cursor: pointer`)}>Seguir</button>
+                <button type="button" onClick={() => { stopAudio(); uncommit(inputPh); update((s) => ({ answers: { ...s.answers, [inputPh]: null }, mirrored: { ...s.mirrored, [inputPh]: false }, typing: dataRef.current.settings.prefer === 'texto', askHelp: false, playing: null })); }} style={sx('min-height: 48px; padding: 0 14px; border: none; background: transparent; color: #E6DACB; font-size: 15px; cursor: pointer; font-family: inherit')}>Repetir</button>
+                <button type="button" onClick={guard(() => go(d.next))} style={sx(`height: 48px; min-width: 160px; padding: 0 32px; border-radius: 24px; border: 1px solid ${accent}; background: ${accent}; color: #2B2430; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit`)}>Seguir</button>
               </div>
             </>
           )}
@@ -585,7 +531,7 @@ export default function App() {
   // ---------- Tu día ----------
   const renderMirror = () => (
     <>
-      <div style={sx(`position: absolute; left: 24px; right: 24px; top: 96px; max-height: ${st.dayOpen ? Math.min(580, H - 220) : Math.min(300, H - 400)}px; overflow-y: auto; padding: 22px 22px 0 20px; border-radius: 26px; background: ${st.dayOpen ? 'rgba(47,40,52,0.97)' : 'linear-gradient(160deg, rgba(245,239,228,0.09) 0%, rgba(245,239,228,0.03) 100%)'}; transition: max-height .7s ease, background .7s ease; border: 1px solid rgba(245,239,228,0.1); box-shadow: 0 24px 50px -24px rgba(0,0,0,0.6); z-index: 1; -webkit-overflow-scrolling: touch`)}>
+      <div style={sx(`position: absolute; left: 24px; right: 24px; top: 96px; max-height: ${st.dayOpen ? Math.min(580, H - 220) : Math.min(300, H - 400)}px; overflow-y: auto; padding: 22px 22px 0 20px; border-radius: 26px; background: ${st.dayOpen ? 'rgba(40,33,48,0.97)' : 'linear-gradient(160deg, rgba(245,239,228,0.09) 0%, rgba(245,239,228,0.03) 100%)'}; -webkit-backdrop-filter: blur(16px) saturate(130%); backdrop-filter: blur(16px) saturate(130%); transition: max-height .7s ease, background .7s ease; border: 1px solid rgba(245,239,228,0.1); box-shadow: 0 24px 50px -24px rgba(0,0,0,0.6); z-index: 1`)}>
         <div style={sx('display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px')}>
           <h1 style={sx(H1 + '; font-size: 26px; line-height: 1')}>Tu día</h1>
           <p style={sx('margin: 0; font-size: 12px; letter-spacing: 0.04em; color: #CDBFAE')}>{cap(longLabel(dayKey))}</p>
@@ -597,11 +543,9 @@ export default function App() {
               <span aria-hidden="true" style={sx(`position: absolute; left: -26px; top: 6px; width: 11px; height: 11px; border-radius: 6px; background: ${sec.fill}; border: 1.5px solid ${sec.ring}; box-shadow: 0 0 ${sec.glow}px rgba(242,180,90,0.55)`)} />
               <div style={sx('display: flex; justify-content: space-between; align-items: center; gap: 8px')}>
                 <p style={sx(EYEBROW)}>{sec.label}</p>
-                <button type="button" aria-label={'Añadir ' + sec.label} onClick={() => update({ adding: sec.key, draft: '' })} style={sx('height: 28px; padding: 0 12px; border-radius: 14px; border: 1px solid rgba(245,239,228,0.14); background: transparent; color: #CDBFAE; font-size: 12px; cursor: pointer')}>+ Añadir</button>
+                <button type="button" aria-label={'Añadir ' + sec.label} onClick={() => update({ adding: sec.key, draft: '' })} style={sx('height: 28px; padding: 0 12px; border-radius: 14px; border: 1px solid rgba(245,239,228,0.14); background: transparent; color: #CDBFAE; font-size: 12px; cursor: pointer; font-family: inherit')}>+ Añadir</button>
               </div>
-              {sec.items.length === 0 && st.adding !== sec.key && (
-                <p style={sx(ITALIC + '; font-size: 15px; color: rgba(205,191,174,0.6)')}>{sec.low ? 'Hoy no lo nombraste. Está bien así.' : 'Aún nada.'}</p>
-              )}
+              {sec.items.length === 0 && st.adding !== sec.key && <p style={sx(ITALIC + '; font-size: 15px; color: rgba(205,191,174,0.6)')}>{sec.low ? 'Hoy no lo nombraste. Está bien así.' : 'Aún nada.'}</p>}
               {sec.items.map((m) => (
                 <div key={m.id + m.text} style={sx('display: flex; gap: 8px; align-items: flex-start')}>
                   <span aria-hidden="true" style={sx(`margin-top: 11px; width: 6px; height: 1px; flex-shrink: 0; background: #CDBFAE; opacity: ${sec.items.length > 1 ? 1 : 0}`)} />
@@ -611,722 +555,315 @@ export default function App() {
               ))}
               {st.adding === sec.key && (
                 <div style={sx('display: flex; gap: 8px; align-items: center; margin-top: 2px')}>
-                  <input
-                    type="text"
-                    aria-label={'Añadir ' + sec.label}
-                    placeholder="Algo más …"
-                    value={st.draft}
-                    autoFocus
-                    enterKeyHint="done"
-                    onChange={(e) => update({ draft: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') { e.preventDefault(); commitAdd(); }
-                      if (e.key === 'Escape') update({ adding: null, draft: '' });
-                    }}
-                    style={sx(INPUT + '; flex-grow: 1; height: 40px; border-radius: 20px')}
-                  />
-                  <button type="button" onClick={commitAdd} style={sx('height: 40px; padding: 0 16px; border-radius: 20px; border: none; background: #F2B45A; color: #2B2430; font-size: 13px; font-weight: 700; cursor: pointer')}>OK</button>
+                  <input type="text" aria-label={'Añadir ' + sec.label} placeholder="Algo más …" value={st.draft} autoFocus enterKeyHint="done" onChange={(e) => update({ draft: e.target.value })}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitAdd(); } if (e.key === 'Escape') update({ adding: null, draft: '' }); }} style={sx(INPUT + '; flex-grow: 1')} />
+                  <button type="button" onClick={commitAdd} style={sx('height: 40px; padding: 0 16px; border-radius: 20px; border: none; background: #E6CDA3; color: #2B2430; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit')}>OK</button>
                 </div>
               )}
             </div>
           ))}
         </div>
-        <div style={sx(`position: sticky; bottom: 0; margin: 0 -22px 0 -20px; padding: 26px 0 14px; display: flex; justify-content: center; background: linear-gradient(180deg, rgba(47,40,52,0) 0%, ${st.dayOpen ? 'rgba(47,40,52,1)' : 'rgba(47,40,52,0.92)'} 55%)`)}>
+        <div style={sx(`position: sticky; bottom: 0; margin: 0 -22px 0 -20px; padding: 26px 0 14px; display: flex; justify-content: center; background: linear-gradient(180deg, rgba(40,33,48,0) 0%, ${st.dayOpen ? 'rgba(40,33,48,1)' : 'rgba(40,33,48,0.92)'} 55%)`)}>
           {(itemCount > 3 || st.dayOpen) && (
-            <button type="button" aria-expanded={st.dayOpen} onClick={() => update((s) => ({ dayOpen: !s.dayOpen }))} style={sx('height: 34px; padding: 0 16px; border-radius: 17px; border: 1px solid rgba(245,239,228,0.16); background: rgba(43,36,48,0.6); color: #E6DACB; font-size: 13px; display: flex; align-items: center; gap: 6px; cursor: pointer')}>
-              {st.dayOpen ? 'Ver menos' : 'Ver todo'}
-              <Icon name="alt-arrow-down-linear" size={14} style={{ transform: `rotate(${st.dayOpen ? 180 : 0}deg)`, transition: 'transform .4s' }} />
+            <button type="button" aria-expanded={st.dayOpen} onClick={() => update((s) => ({ dayOpen: !s.dayOpen }))} style={sx('height: 34px; padding: 0 16px; border-radius: 17px; border: 1px solid rgba(245,239,228,0.16); background: rgba(43,36,48,0.6); color: #E6DACB; font-size: 13px; display: flex; align-items: center; gap: 6px; cursor: pointer; font-family: inherit')}>
+              {st.dayOpen ? 'Ver menos' : 'Ver todo'}<Icon name="alt-arrow-down-linear" size={14} style={{ transform: `rotate(${st.dayOpen ? 180 : 0}deg)`, transition: 'transform .4s' }} />
             </button>
           )}
         </div>
       </div>
       <div style={sx('position: absolute; left: 28px; right: 28px; bottom: 28px; display: flex; flex-direction: column; gap: 14px')}>
-        <button type="button" onClick={() => update({ breathing: true })} style={sx('width: 100%; height: 50px; border-radius: 25px; border: 1px solid rgba(245,239,228,0.25); background: transparent; color: #F5EFE4; font-size: 15px; cursor: pointer')}>Respirar un momento</button>
-        <button type="button" onClick={finishDay} style={sx(PRIMARY)}>Seguir</button>
+        <button type="button" onClick={() => update({ breathing: true })} style={sx('width: 100%; height: 50px; border-radius: 25px; border: 1px solid rgba(245,239,228,0.25); background: transparent; color: #F5EFE4; font-size: 15px; cursor: pointer; font-family: inherit')}>Respirar un momento</button>
+        <button type="button" onClick={finishDay} style={sx(PRIMARY + '; width: 100%')}>Seguir</button>
       </div>
     </>
   );
 
-  // ---------- Resumen ----------
-  const renderReview = () => {
-    const [cy, cm] = st.calMonth;
-    const first = new Date(cy, cm, 1);
-    const offset = (first.getDay() + 6) % 7;
-    const daysInMonth = new Date(cy, cm + 1, 0).getDate();
-    const cells: (string | null)[] = [];
-    for (let i = 0; i < offset; i++) cells.push(null);
-    for (let n = 1; n <= daysInMonth; n++) cells.push(keyOf(new Date(cy, cm, n)));
-    const tdate = parseKey(today);
-    const isCurrentMonth = cy === tdate.getFullYear() && cm === tdate.getMonth();
-    const moveMonth = (delta: number) => {
-      const d = new Date(cy, cm + delta, 1);
-      const sel = keyOf(d.getFullYear() === tdate.getFullYear() && d.getMonth() === tdate.getMonth() ? tdate : d);
-      update({ calMonth: [d.getFullYear(), d.getMonth()], selDay: sel });
-    };
-    const selEntry = data.days[st.selDay];
-    const selSpecial = !!data.special[st.selDay];
-    const selFuture = st.selDay > today;
-    const selSecs = sections(selEntry).filter((s) => s.items.length);
+  // ---------- Kontext für die Reiter ----------
+  const ctx: Ctx = { data, setData, ui: st, update, today, nights, demo, go, tabGo, toast, playBtn, speak, retryPatterns: () => update({ patState: 'idle' }) };
 
-    const CHEV = <span style={sx('color: #9C8F86; display: flex')}><Icon name="alt-arrow-right-linear" size={18} /></span>;
-    const audioFor = (quote: string) => {
-      const t = quote.split(' · ')[0].replace(/[«»"]/g, '').trim().toLowerCase();
-      for (const e of Object.values(data.days)) for (const m of [...e.high1, ...e.high2]) if (m.audioId && m.text.trim().toLowerCase() === t) return m.audioId;
-      return undefined;
-    };
-
-    let pv: { backLabel: string; title: string; intro: string; list: { n: string; f: string; i: number }[]; item?: PatternItem; isSrc?: boolean } = { backLabel: 'Patrones', title: '', intro: '', list: [] };
-    if (patterns && (st.patView === 'src' || st.patView === 'drain')) {
-      const isSrc = st.patView === 'src';
-      const arr = isSrc ? patterns.sources : patterns.drains;
-      if (st.patItem == null) {
-        pv = { ...pv, title: isSrc ? 'Tus fuentes de energía' : 'Lo que te quita energía', intro: isSrc ? 'Lo que vuelve una y otra vez en tus highs.' : 'Patrones en tus lows: qué te pesa y cuándo.', list: arr.map((it, i) => ({ n: it.name, f: it.frequency, i })) };
-      } else if (arr[st.patItem]) {
-        const it = arr[st.patItem];
-        pv = { ...pv, backLabel: isSrc ? 'Fuentes de energía' : 'Lo que te quita energía', title: it.name, intro: it.description, item: it, isSrc };
-      }
-    }
-    if (st.patView === 'more') pv = { ...pv, title: 'Ideas para ti', intro: 'Salen de lo que te da y te quita energía. Sin presión: quédate solo con lo que te encaje.' };
-    const teaser = (arr: PatternItem[]) => {
-      const names = arr.map((x) => x.name.toLowerCase());
-      if (!names.length) return 'Aún no hay nada claro';
-      const head = names.slice(0, 2).join(', ');
-      return cap(head) + (names.length > 2 ? ` y ${names.length - 2} más` : '');
-    };
-    const ideas = patterns ? patterns.ideas.filter((t) => !data.ideas.hidden[t]) : [];
-
-    return (
-      <div style={sx('position: absolute; left: 20px; right: 20px; top: 104px; bottom: 112px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; -webkit-overflow-scrolling: touch')}>
-        <h1 style={sx(H1 + '; font-size: 30px')}>Resumen</h1>
-        <div role="tablist" aria-label="Vista del resumen" style={sx('display: flex; padding: 4px; border-radius: 22px; background: rgba(245,239,228,0.06); flex-shrink: 0')}>
-          {([['cal', 'Calendario'], ['pat', 'Patrones']] as const).map(([id, label]) => {
-            const on = st.revTab === id;
-            return (
-              <button key={id} type="button" role="tab" aria-selected={on} onClick={() => update({ revTab: id, patView: null, patItem: null })} style={sx(`flex: 1; height: 38px; border-radius: 19px; border: none; background: ${on ? 'rgba(242,180,90,0.9)' : 'transparent'}; color: ${on ? '#2B2430' : '#E6DACB'}; font-size: 14px; font-weight: 700; cursor: pointer`)}>{label}</button>
-            );
-          })}
-        </div>
-
-        {st.revTab === 'cal' && (
-          <>
-            <div style={sx('padding: 16px 14px; border-radius: 22px; background: rgba(245,239,228,0.05); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0')}>
-              <div style={sx('display: flex; justify-content: space-between; align-items: center')}>
-                <button type="button" aria-label="Mes anterior" onClick={() => moveMonth(-1)} style={sx('width: 36px; height: 36px; border-radius: 18px; border: none; background: transparent; color: #CDBFAE; cursor: pointer; display: flex; align-items: center; justify-content: center')}><Icon name="alt-arrow-left-linear" size={18} /></button>
-                <p data-testid="cal-mes" style={sx('margin: 0; font-size: 15px; font-weight: 700; color: #F5EFE4')}>{monthName(cm)} {cy}</p>
-                <button type="button" aria-label="Mes siguiente" disabled={isCurrentMonth} onClick={() => moveMonth(1)} style={sx(`width: 36px; height: 36px; border-radius: 18px; border: none; background: transparent; color: #CDBFAE; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: ${isCurrentMonth ? 0.25 : 1}`)}><Icon name="alt-arrow-right-linear" size={18} /></button>
-              </div>
-              <div style={sx('display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px')}>
-                {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((wd, i) => (
-                  <p key={i} style={sx('margin: 0; text-align: center; font-size: 11px; font-weight: 700; color: #9C8F86')}>{wd}</p>
-                ))}
-                {cells.map((dk, i) => {
-                  if (!dk) return <div key={'b' + i} />;
-                  const n = parseKey(dk).getDate();
-                  const sel = st.selDay === dk, isToday = dk === today, has = hasContent(data.days[dk]), future = dk > today;
-                  return (
-                    <div key={dk} style={sx('display: flex; justify-content: center')}>
-                      <button
-                        type="button"
-                        aria-label={`${n} de ${monthName(cm)}${has ? ', con momentos' : ''}${data.special[dk] ? ', día especial' : ''}`}
-                        aria-pressed={sel}
-                        onClick={() => update({ selDay: dk })}
-                        style={sx(`position: relative; width: 40px; height: 40px; border-radius: 20px; border: 1px solid ${isToday && !sel ? '#F2B45A' : 'transparent'}; background: ${sel ? '#F2B45A' : 'transparent'}; color: ${sel ? '#2B2430' : future ? '#7F736C' : '#F5EFE4'}; font-size: 14px; font-weight: ${isToday ? 800 : 500}; cursor: pointer; padding: 0`)}
-                      >
-                        {n}
-                        <span aria-hidden="true" style={sx(`position: absolute; left: 50%; bottom: 4px; margin-left: -2px; width: 4px; height: 4px; border-radius: 2px; background: ${sel ? '#2B2430' : '#F2B45A'}; opacity: ${has ? 1 : 0}`)} />
-                        {data.special[dk] && <span aria-hidden="true" style={sx('position: absolute; right: -3px; top: -4px; color: #F2B45A')}><Icon name="star-bold" size={11} /></span>}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div data-testid="dia-seleccionado" style={sx('padding: 18px; border-radius: 22px; border: 1px solid rgba(245,239,228,0.1); background: rgba(245,239,228,0.04); display: flex; flex-direction: column; gap: 12px; flex-shrink: 0')}>
-              <div style={sx('display: flex; justify-content: space-between; align-items: center; gap: 8px')}>
-                <p style={sx("margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 20px")}>{longLabel(st.selDay)}</p>
-                {!selFuture && (
-                  <button
-                    type="button"
-                    aria-pressed={selSpecial}
-                    onClick={() => setData((d) => ({ ...d, special: { ...d.special, [st.selDay]: !d.special[st.selDay] } }))}
-                    style={sx(`height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid ${selSpecial ? '#F2B45A' : 'rgba(245,239,228,0.2)'}; background: ${selSpecial ? 'rgba(242,180,90,0.18)' : 'transparent'}; color: ${selSpecial ? '#FBE0A0' : '#E6DACB'}; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 6px; flex-shrink: 0`)}
-                  >
-                    <Icon name={selSpecial ? 'star-bold' : 'star-linear'} size={14} />
-                    {selSpecial ? 'Día especial' : 'Marcar especial'}
-                  </button>
-                )}
-              </div>
-              {selSecs.length > 0 ? selSecs.map((sec) => (
-                <div key={sec.key} style={sx('display: flex; gap: 12px; align-items: flex-start')}>
-                  <span aria-hidden="true" style={sx(`margin-top: 5px; width: 10px; height: 10px; border-radius: 5px; flex-shrink: 0; background: ${sec.fill}; border: 1.5px solid ${sec.ring}`)} />
-                  <div style={sx('display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0')}>
-                    <p style={sx("margin: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #CDBFAE")}>{sec.label}</p>
-                    {sec.items.map((m) => (
-                      <div key={m.id + m.text} style={sx('display: flex; gap: 10px; align-items: center')}>
-                        <p style={sx(ITALIC + '; font-size: 16px; line-height: 1.4; flex-grow: 1')}>{momentLabel(m)}</p>
-                        {m.audioId && playBtn(m.audioId, 26)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )) : (
-                <p style={sx('margin: 0; font-size: 14px; color: #CDBFAE')}>
-                  {selFuture ? 'Este día aún no ha llegado.' : st.selDay === today ? 'Esta noche aún no has encendido la vela.' : 'Este día no encendiste la vela. Está bien así.'}
-                </p>
-              )}
-            </div>
-          </>
-        )}
-
-        {st.revTab === 'pat' && doneCount < 7 && (
-          <div style={sx(CARD + '; border: 1px solid rgba(242,180,90,0.25)')}>
-            <p style={sx('margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #F2B45A')}>Primeras huellas</p>
-            <p style={sx("margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 20px; line-height: 1.4")}>Tus patrones van creciendo con cada noche.</p>
-            <p style={sx('margin: 0; font-size: 15px; line-height: 1.55; color: #CDBFAE')}>
-              {doneCount === 0 ? 'Aún no hay noches guardadas.' : doneCount === 1 ? 'Llevas una noche.' : `Llevas ${doneCount} noches.`} Hacia la séptima, Vela empieza a ver lo que se repite: qué te da energía y qué te la quita.
-            </p>
-            <div aria-hidden="true" style={sx('display: flex; gap: 6px')}>
-              {Array.from({ length: 7 }, (_, i) => <span key={i} style={sx(`width: 10px; height: 10px; border-radius: 5px; border: 1.5px solid #F2B45A; background: ${i < doneCount ? '#F2B45A' : 'transparent'}`)} />)}
-            </div>
-          </div>
-        )}
-
-        {st.revTab === 'pat' && doneCount >= 7 && !patterns && st.patState === 'loading' && (
-          <div style={sx(CARD + '; align-items: center; text-align: center; padding: 28px 18px')}>
-            <div aria-hidden="true" style={sx('height: 24px; display: flex; gap: 8px; align-items: center')}><span className="thinkdot" /><span className="thinkdot" /><span className="thinkdot" /></div>
-            <p role="status" style={sx('margin: 0; font-size: 15px; color: #CDBFAE')}>Vela está mirando tus noches …</p>
-          </div>
-        )}
-
-        {st.revTab === 'pat' && doneCount >= 7 && st.patState === 'error' && (
-          <div style={sx(CARD)}>
-            <p style={sx('margin: 0; font-size: 15px; line-height: 1.55; color: #E6DACB')}>{patterns ? 'No pude actualizar tus patrones ahora. Te muestro los últimos.' : 'Ahora mismo no puedo mirar tus patrones. Necesito conexión a internet.'}</p>
-            <button type="button" onClick={() => update({ patState: 'idle' })} style={sx(GHOST + '; align-self: flex-start; display: flex; align-items: center; gap: 8px')}><Icon name="refresh-linear" size={16} />Reintentar</button>
-          </div>
-        )}
-
-        {st.revTab === 'pat' && doneCount >= 7 && patterns && !st.patView && (
-          <div style={sx('display: flex; flex-direction: column; gap: 10px; flex-shrink: 0')}>
-            {([
-              { id: 'src' as const, title: 'Tus fuentes de energía', teaser: teaser(patterns.sources), icon: 'leaf-linear' as const, tint: 'rgba(242,180,90,0.14)', ring: GOLD },
-              { id: 'drain' as const, title: 'Lo que te quita energía', teaser: teaser(patterns.drains), icon: 'battery-low-linear' as const, tint: 'rgba(205,191,174,0.12)', ring: '#CDBFAE' },
-              { id: 'more' as const, title: 'Ideas para ti', teaser: 'Pequeñas cosas que podrían ayudarte', icon: 'lightbulb-minimalistic-linear' as const, tint: 'rgba(242,180,90,0.14)', ring: GOLD },
-            ]).map((tl) => (
-              <button key={tl.id} type="button" onClick={() => update({ patView: tl.id, patItem: null })} style={sx('width: 100%; padding: 18px 16px; border-radius: 20px; border: 1px solid rgba(245,239,228,0.08); background: rgba(245,239,228,0.05); color: #F5EFE4; display: flex; gap: 14px; align-items: center; text-align: left; cursor: pointer')}>
-                <span aria-hidden="true" style={sx(`width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; background: ${tl.tint}; color: ${tl.ring}; display: flex; align-items: center; justify-content: center`)}><Icon name={tl.icon} size={22} /></span>
-                <span style={sx('display: flex; flex-direction: column; gap: 3px; flex-grow: 1; min-width: 0')}>
-                  <span style={sx('font-size: 16px; font-weight: 700')}>{tl.title}</span>
-                  <span style={sx('font-size: 13px; line-height: 1.4; color: #CDBFAE')}>{tl.teaser}</span>
-                </span>
-                {CHEV}
-              </button>
-            ))}
-            {st.patState === 'loading' && <p role="status" style={sx('margin: 4px 0 0; font-size: 13px; color: #9C8F86; text-align: center')}>Actualizando con tus últimas noches …</p>}
-          </div>
-        )}
-
-        {st.revTab === 'pat' && patterns && st.patView && (
-          <div style={sx('display: flex; flex-direction: column; gap: 14px; flex-shrink: 0')}>
-            <button type="button" onClick={() => (st.patItem != null ? update({ patItem: null }) : update({ patView: null }))} style={sx('align-self: flex-start; height: 36px; padding: 0 12px 0 4px; border: none; background: transparent; color: #CDBFAE; font-size: 14px; display: flex; align-items: center; gap: 4px; cursor: pointer')}>
-              <Icon name="alt-arrow-left-linear" size={18} />{pv.backLabel}
-            </button>
-            <div style={sx('display: flex; flex-direction: column; gap: 6px')}>
-              <h2 style={sx(H1 + '; font-size: 26px; line-height: 1.2')}>{pv.title}</h2>
-              <p style={sx('margin: 0; font-size: 15px; line-height: 1.55; color: #CDBFAE')}>{pv.intro}</p>
-            </div>
-            {(st.patView === 'src' || st.patView === 'drain') && st.patItem == null && (
-              <div style={sx('display: flex; flex-direction: column; border-radius: 20px; background: rgba(245,239,228,0.05); overflow: hidden')}>
-                {pv.list.map((li) => (
-                  <button key={li.i} type="button" onClick={() => update({ patItem: li.i })} style={sx('width: 100%; padding: 16px; border: none; border-bottom: 1px solid rgba(245,239,228,0.06); background: transparent; color: #F5EFE4; display: flex; gap: 12px; align-items: center; text-align: left; cursor: pointer')}>
-                    <span style={sx('display: flex; flex-direction: column; gap: 2px; flex-grow: 1')}>
-                      <span style={sx('font-size: 16px; font-weight: 700')}>{li.n}</span>
-                      <span style={sx('font-size: 13px; color: #CDBFAE')}>{li.f}</span>
-                    </span>
-                    {CHEV}
-                  </button>
-                ))}
-              </div>
-            )}
-            {pv.item && (
-              <>
-                {pv.item.when && (
-                  <div style={sx('padding: 16px 18px; border-radius: 20px; background: rgba(245,239,228,0.05); display: flex; flex-direction: column; gap: 4px')}>
-                    <p style={sx('margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #CDBFAE')}>Cuándo</p>
-                    <p style={sx('margin: 0; font-size: 15px; line-height: 1.5')}>{pv.item.when}</p>
-                  </div>
-                )}
-                <p style={sx('margin: 4px 0 0; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #CDBFAE')}>{pv.isSrc ? 'Tus momentos' : 'Lo que te ayudó'}</p>
-                {pv.item.quotes.map((q, i) => {
-                  const a = pv.isSrc ? audioFor(q) : undefined;
-                  return (
-                    <div key={i} style={sx('padding: 14px 16px; border-radius: 18px; background: rgba(245,239,228,0.05); display: flex; gap: 12px; align-items: center')}>
-                      {a && playBtn(a)}
-                      <span style={sx("font-family: 'Fraunces', serif; font-style: italic; font-weight: 300; font-size: 16px; line-height: 1.4")}>{q}</span>
-                    </div>
-                  );
-                })}
-              </>
-            )}
-            {st.patView === 'more' && ideas.length === 0 && <p style={sx('margin: 0; font-size: 14px; color: #CDBFAE')}>Por ahora no hay más ideas. Vuelve en unos días.</p>}
-            {st.patView === 'more' && ideas.map((t) => {
-              const on = !!data.ideas.on[t];
-              return (
-                <div key={t} style={sx('padding: 18px; border-radius: 20px; border: 1px solid rgba(242,180,90,0.3); display: flex; flex-direction: column; gap: 14px')}>
-                  <p style={sx("margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 18px; line-height: 1.45")}>{t}</p>
-                  <div style={sx('display: flex; gap: 10px')}>
-                    <button type="button" aria-pressed={on} onClick={() => setData((d) => ({ ...d, ideas: { ...d.ideas, on: { ...d.ideas.on, [t]: !d.ideas.on[t] } } }))} style={sx(`height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid #F2B45A; background: ${on ? '#F2B45A' : 'transparent'}; color: ${on ? '#2B2430' : '#FBE0A0'}; font-size: 14px; font-weight: 700; cursor: pointer`)}>{on ? '✓ Lo intentaré' : 'Lo intentaré'}</button>
-                    <button type="button" onClick={() => setData((d) => ({ ...d, ideas: { ...d.ideas, hidden: { ...d.ideas.hidden, [t]: true } } }))} style={sx('height: 40px; padding: 0 14px; border: none; background: transparent; color: #CDBFAE; font-size: 14px; cursor: pointer')}>Ahora no</button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+  const jumps: [string, Phase][] = RECURRING_DEMO ? JUMPS_RECURRING : JUMPS_FIRST;
+  const testTools = (
+    <>
+      <p className="testbar-title">Ir directamente a</p>
+      <div className="testbar-row">{jumps.map(([label, target]) => <button key={label} type="button" className="jump" aria-pressed={target === ph} onClick={() => jump(target)}>{label}</button>)}</div>
+      <p className="testbar-title" style={{ marginTop: 6 }}>Noches con Vela</p>
+      <div className="testbar-row">
+        {NIGHT_STEPS.map((n) => <button key={n} type="button" className="jump night" aria-pressed={st.demoNights === n} onClick={() => setNights(n)}>{n}</button>)}
+        <button type="button" className="jump" aria-pressed={st.demoNights == null} onClick={() => { update({ demoNights: null }); setSheetOpen(false); }}>Mis noches ({doneCount})</button>
       </div>
-    );
-  };
-
-  // ---------- Highs ----------
-  const renderHighs = () => {
-    const upcoming = data.upcoming.filter((u) => u.date >= today).sort((a, b) => a.date.localeCompare(b.date));
-    const past: { date: string; m: Moment }[] = [];
-    Object.values(data.days).sort((a, b) => b.date.localeCompare(a.date)).forEach((e) => {
-      [...e.high2, ...e.high1].forEach((m) => { if (momentLabel(m)) past.push({ date: e.date, m }); });
-    });
-    const yearAgo = data.days[addDays(today, -365)];
-    const yearMoment = yearAgo ? [...yearAgo.high1, ...yearAgo.high2].find((m) => momentLabel(m)) : undefined;
-    const saveUpcoming = () => {
-      const title = st.upTitle.trim();
-      if (!title) { update({ toast: 'Escribe qué te hace ilusión.' }); return; }
-      if (!st.upDate || st.upDate < today) { update({ toast: 'Elige hoy o un día que aún esté por llegar.' }); return; }
-      setData((d) => ({ ...d, upcoming: [...d.upcoming, { id: uid(), date: st.upDate, title }] }));
-      update({ upOpen: false, upTitle: '', upDate: addDays(today, 1) });
-    };
-    return (
-      <div style={sx('position: absolute; left: 20px; right: 20px; top: 104px; bottom: 112px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; -webkit-overflow-scrolling: touch')}>
-        <h1 style={sx(H1 + '; font-size: 30px')}>Tus highs</h1>
-        <div style={sx('display: flex; justify-content: space-between; align-items: center; margin-top: 4px')}>
-          <p style={sx('margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #F2B45A')}>Lo que viene</p>
-          {!st.upOpen && <button type="button" aria-label="Añadir algo que te hace ilusión" onClick={() => update({ upOpen: true })} style={sx('height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid rgba(242,180,90,0.35); background: transparent; color: #FBE0A0; font-size: 12px; cursor: pointer')}>+ Añadir</button>}
-        </div>
-        {st.upOpen && (
-          <div style={sx(CARD + '; border: 1px solid rgba(242,180,90,0.3); gap: 10px')}>
-            <input type="text" aria-label="Algo que te hace ilusión" placeholder="Algo que te hace ilusión …" value={st.upTitle} autoFocus onChange={(e) => update({ upTitle: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveUpcoming(); }} style={sx(INPUT)} />
-            <input type="date" aria-label="Fecha" value={st.upDate} min={today} onChange={(e) => update({ upDate: e.target.value })} style={sx(INPUT + '; color-scheme: dark')} />
-            <div style={sx('display: flex; gap: 10px')}>
-              <button type="button" onClick={saveUpcoming} style={sx('height: 42px; padding: 0 20px; border-radius: 21px; border: none; background: #F2B45A; color: #2B2430; font-size: 14px; font-weight: 700; cursor: pointer')}>Guardar</button>
-              <button type="button" onClick={() => update({ upOpen: false, upTitle: '' })} style={sx('height: 42px; padding: 0 14px; border: none; background: transparent; color: #CDBFAE; font-size: 14px; cursor: pointer')}>Cancelar</button>
-            </div>
-          </div>
-        )}
-        {upcoming.length === 0 && !st.upOpen && <p style={sx('margin: 0; font-size: 14px; line-height: 1.5; color: #CDBFAE')}>Apunta aquí lo que te hace ilusión. La ilusión también es un high.</p>}
-        {upcoming.map((up) => {
-          const d = parseKey(up.date);
-          return (
-            <div key={up.id} data-testid="viene" style={sx('padding: 12px 8px 12px 14px; border-radius: 20px; border: 1px solid rgba(242,180,90,0.3); background: rgba(242,180,90,0.06); display: flex; gap: 14px; align-items: center; flex-shrink: 0')}>
-              <div style={sx('width: 48px; height: 52px; border-radius: 14px; background: rgba(242,180,90,0.16); flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center')}>
-                <span style={sx('font-size: 18px; font-weight: 700; color: #FBE0A0; line-height: 1')}>{d.getDate()}</span>
-                <span style={sx('font-size: 11px; color: #E6DACB; text-transform: uppercase; letter-spacing: 0.06em')}>{monthShort(d.getMonth())}</span>
-              </div>
-              <div style={sx('display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1')}>
-                <p style={sx('margin: 0; font-size: 15px; line-height: 1.35')}>{up.title}</p>
-                <p style={sx('margin: 0; font-size: 12px; color: #CDBFAE')}>{inDays(up.date, today)}</p>
-              </div>
-              <button type="button" aria-label={'Quitar ' + up.title} onClick={() => setData((dd) => ({ ...dd, upcoming: dd.upcoming.filter((x) => x.id !== up.id) }))} style={sx('width: 40px; height: 40px; border: none; background: transparent; color: #9C8F86; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0')}><Icon name="close-circle-linear" size={20} /></button>
-            </div>
-          );
-        })}
-        <p style={sx(SECTION + '; margin-top: 14px')}>Lo que fue</p>
-        {yearMoment && (
-          <div style={sx('padding: 16px; border-radius: 20px; border: 1px solid rgba(242,180,90,0.35); display: flex; gap: 14px; align-items: center; flex-shrink: 0')}>
-            {yearMoment.audioId ? playBtn(yearMoment.audioId, 40) : <span aria-hidden="true" style={sx('width: 40px; height: 40px; border-radius: 20px; background: #F2B45A; color: #2B2430; flex-shrink: 0; display: flex; align-items: center; justify-content: center')}><Icon name="star-shine-bold-duotone" size={20} /></span>}
-            <div style={sx('display: flex; flex-direction: column; gap: 2px')}>
-              <p style={sx('margin: 0; font-size: 12px; color: #F2B45A; font-weight: 700')}>Hace un año</p>
-              <p style={sx('margin: 0; font-size: 15px')}>{momentLabel(yearMoment)}</p>
-            </div>
-          </div>
-        )}
-        {past.length === 0 && <p style={sx('margin: 0; font-size: 14px; line-height: 1.5; color: #CDBFAE')}>Aquí irán apareciendo tus highs, noche a noche.</p>}
-        {past.slice(0, 60).map(({ date, m }) => (
-          <div key={m.id} data-testid="fue" style={sx('padding: 14px 16px; border-radius: 20px; background: rgba(245,239,228,0.06); display: flex; gap: 14px; align-items: center; flex-shrink: 0')}>
-            {m.audioId ? playBtn(m.audioId, 36) : <span aria-hidden="true" style={sx('width: 36px; height: 36px; border-radius: 18px; border: 1.5px solid rgba(242,180,90,0.4); color: #F2B45A; flex-shrink: 0; display: flex; align-items: center; justify-content: center')}><Icon name="star-linear" size={16} /></span>}
-            <div style={sx('display: flex; flex-direction: column; gap: 2px; min-width: 0')}>
-              <p style={sx('margin: 0; font-size: 12px; color: #CDBFAE')}>{relLabel(date, today)}</p>
-              <p style={sx('margin: 0; font-size: 15px; line-height: 1.4')}>{momentLabel(m)}</p>
-            </div>
-          </div>
-        ))}
+      <div className="testbar-links">
+        <a href="/?prueba=1">Modo prueba</a>
+        <a href="/?modo=recurrente">Notificación</a>
+        <a href="/?noches=14">Noche 14</a>
+        <a href="/">App normal</a>
+        <span>Respiración: {breathSeconds} s</span>
       </div>
-    );
-  };
+      <p className="credit">Iconos: <a href="https://www.figma.com/community/file/1166831539721848736" target="_blank" rel="noopener noreferrer">Solar</a> de 480 Design, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></p>
+    </>
+  );
 
-  // ---------- Ajustes ----------
-  const renderSettings = () => {
-    const s = data.settings;
-    const chip = (on: boolean) => `min-width: 64px; height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid ${on ? GOLD : 'rgba(245,239,228,0.22)'}; background: ${on ? 'rgba(242,180,90,0.18)' : 'transparent'}; color: #F5EFE4; font-size: 14px; font-weight: 600; cursor: pointer`;
-    const row = (title: string, children: ReactNode, hint?: string) => (
-      <div style={sx(CARD)}>
-        <p style={sx('margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #CDBFAE')}>{title}</p>
-        {children}
-        {hint && <p style={sx('margin: 0; font-size: 13px; line-height: 1.5; color: #9C8F86')}>{hint}</p>}
-      </div>
-    );
-    return (
-      <>
-        <button type="button" aria-label="Volver" onClick={() => go('home')} style={sx('position: absolute; left: 24px; top: 54px; z-index: 2; ' + BACK_BTN + '; background: #3A3240')}><Icon name="alt-arrow-left-linear" size={20} /></button>
-        <div style={sx('position: absolute; left: 20px; right: 20px; top: 112px; bottom: 24px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; -webkit-overflow-scrolling: touch')}>
-          <h1 style={sx(H1 + '; font-size: 30px')}>Ajustes</h1>
-          {row('Recordatorio', (
-            <>
-              <div style={sx('display: flex; gap: 8px; flex-wrap: wrap')}>
-                {['21:00', '21:30', '22:00', '22:30'].map((tm) => (
-                  <button key={tm} type="button" aria-pressed={s.remindTime === tm} onClick={() => setSettings({ remindTime: tm })} style={sx(chip(s.remindTime === tm))}>{tm}</button>
-                ))}
-              </div>
-              <button type="button" onClick={() => { addReminderToCalendar(s.remindTime); setSettings({ remindOn: true }); update({ toast: 'Abre el archivo para añadir el recordatorio a tu calendario.' }); }} style={sx(GHOST + '; display: flex; align-items: center; justify-content: center; gap: 8px')}><Icon name="calendar-add-linear" size={18} />Añadir a mi calendario</button>
-            </>
-          ), s.remindOn ? `Cada noche a las ${s.remindTime}, como evento con aviso en tu calendario. Si cambias la hora, vuelve a añadirlo.` : 'Vela te lo recuerda con un evento en tu calendario, una vez por la noche.')}
-          {row('Cómo prefieres contarlo', (
-            <>
-              <div style={sx('display: flex; gap: 8px')}>
-                <button type="button" aria-pressed={s.prefer === 'voz'} onClick={() => setSettings({ prefer: 'voz' })} style={sx(chip(s.prefer === 'voz'))}>Hablar</button>
-                <button type="button" aria-pressed={s.prefer === 'texto'} onClick={() => setSettings({ prefer: 'texto' })} style={sx(chip(s.prefer === 'texto'))}>Escribir</button>
-              </div>
-              {!voiceSupported() && <p style={sx('margin: 0; font-size: 13px; color: #9C8F86')}>Este navegador no permite usar el micrófono.</p>}
-              {voiceSupported() && !sttSupported() && <p style={sx('margin: 0; font-size: 13px; line-height: 1.5; color: #9C8F86')}>Este navegador guarda tu voz, pero no la transcribe. Para el texto automático, usa Chrome o Safari.</p>}
-            </>
-          ))}
-          {row('Encender la vela', (
-            <div style={sx('display: flex; gap: 8px')}>
-              {[3, 5, 8].map((n) => (
-                <button key={n} type="button" aria-pressed={s.breathSeconds === n} onClick={() => setSettings({ breathSeconds: n })} style={sx(chip(s.breathSeconds === n))}>{n} s</button>
-              ))}
-            </div>
-          ), 'Lo que dura un respiro con el dedo sobre la mecha.')}
-          {row('Música tranquila', (
-            <a href={SPOTIFY_URL} target="_blank" rel="noopener noreferrer" style={sx(GHOST + '; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none')}><Icon name="music-notes-linear" size={18} />Abrir piano tranquilo en Spotify</a>
-          ))}
-          {!IS_STANDALONE && row('Vela en tu pantalla de inicio', (
-            <p style={sx('margin: 0; font-size: 15px; line-height: 1.5; color: #E6DACB; display: flex; gap: 10px; align-items: center')}><Icon name="smartphone-linear" size={20} />Úsala como una app, a pantalla completa.</p>
-          ), IS_IOS ? 'En Safari: toca Compartir y luego «Añadir a pantalla de inicio».' : 'En Chrome: menú ⋮ y luego «Instalar app» o «Añadir a pantalla de inicio».')}
-          {row('Privacidad', (
-            <>
-              <button type="button" onClick={exportData} style={sx(GHOST + '; display: flex; align-items: center; justify-content: center; gap: 8px')}><Icon name="download-minimalistic-linear" size={18} />Exportar mis momentos</button>
-              {!st.confirmDelete ? (
-                <button type="button" onClick={() => update({ confirmDelete: true })} style={sx(GHOST + '; display: flex; align-items: center; justify-content: center; gap: 8px; color: #CDBFAE')}><Icon name="trash-bin-minimalistic-linear" size={18} />Borrar todo</button>
-              ) : (
-                <div style={sx('display: flex; flex-direction: column; gap: 8px')}>
-                  <p style={sx('margin: 0; font-size: 14px; line-height: 1.5; color: #E6DACB')}>¿Seguro? Se borrarán todas tus noches y grabaciones de este dispositivo.</p>
-                  <div style={sx('display: flex; gap: 10px')}>
-                    <button type="button" onClick={deleteAll} style={sx(GHOST + '; border-color: #CDBFAE')}>Sí, borrar</button>
-                    <button type="button" onClick={() => update({ confirmDelete: false })} style={sx('height: 44px; padding: 0 14px; border: none; background: transparent; color: #CDBFAE; font-size: 14px; cursor: pointer')}>Cancelar</button>
-                  </div>
-                </div>
-              )}
-            </>
-          ), 'Tus momentos y tu voz se guardan solo en este dispositivo. Para el espejo y los patrones, el texto (nunca el audio) se envía a Claude, de Anthropic.')}
-          {row('Probar Vela', (
-            <button type="button" onClick={() => { setData((d) => withSampleData(d)); update({ toast: 'Noches de ejemplo añadidas.' }); }} style={sx(GHOST)}>Añadir noches de ejemplo</button>
-          ), 'Añade diez noches de ejemplo para ver el calendario, los highs y los patrones. Puedes borrarlas con «Borrar todo».')}
-          <p style={sx('margin: 4px 0 0; font-size: 11px; color: #7F736C; text-align: center')}>
-            Iconos: <a href="https://www.figma.com/community/file/1166831539721848736" target="_blank" rel="noopener noreferrer" style={sx('color: inherit')}>Solar</a> de 480 Design, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" style={sx('color: inherit')}>CC BY 4.0</a>
-          </p>
-        </div>
-      </>
-    );
-  };
+  // Navbar-Geometrie (Pille gleitet)
+  const navTabs = TABS.filter((t) => t !== 'inward' || five);
+  const inW = five ? 50 : 56;
+  const navActive: Phase = ph === 'highs' || ph === 'patterns' || ph === 'review' || ph === 'inward' ? ph : ph === 'settings' ? 'review' : 'home';
+  let navX = 6;
+  for (const t of navTabs) { if (t === navActive) break; navX += inW + 4; }
 
-  const jumps: [string, Phase][] = [...(RECURRING_DEMO ? JUMPS_RECURRING : JUMPS_FIRST), ['Ajustes', 'settings']];
-  const qs = (opts: { modo?: boolean; prueba?: boolean }) => {
-    const p = new URLSearchParams();
-    if (opts.modo) p.set('modo', 'recurrente');
-    if (opts.prueba) p.set('prueba', '1');
-    if (params.get('respira')) p.set('respira', params.get('respira')!);
-    const s = p.toString();
-    return '/' + (s ? '?' + s : '');
+  const navIcon = (t: Phase, on: boolean) => {
+    if (t === 'home') return <Icon name={on ? 'moon-stars-bold-duotone' : 'moon-stars-linear'} size={24} />;
+    if (t === 'highs') return <Icon name={on ? 'star-shine-bold-duotone' : 'star-shine-linear'} size={24} />;
+    if (t === 'patterns') return <Icon name={on ? 'target-bold-duotone' : 'target-linear'} size={24} />;
+    if (t === 'review') return <Icon name={on ? 'calendar-bold-duotone' : 'calendar-linear'} size={24} />;
+    return <Spiral size={24} />;
   };
-  const jumpButtons = (
-    <div className="testbar-row">
-      {jumps.map(([label, target]) => (
-        <button key={target} type="button" className="jump" aria-pressed={target === ph} onClick={() => jump(target)}>{label}</button>
-      ))}
-    </div>
-  );
-  const modeLinks = (
-    <div className="testbar-links">
-      <a href={qs({ prueba: true })}>Modo prueba</a>
-      <a href={qs({ modo: true })}>Notificación (demo)</a>
-      <a href="/">App normal</a>
-      <span>Respiración: {breathSeconds} s</span>
-    </div>
-  );
-  const credit = (
-    <p className="credit">
-      Iconos: <a href="https://www.figma.com/community/file/1166831539721848736" target="_blank" rel="noopener noreferrer">Solar</a> de 480 Design,{' '}
-      <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
-    </p>
-  );
-  const doneLines = doneSections.filter((s) => s.items.length).map((s) => ({ ring: s.ring, text: momentLabel(s.items[0]) }));
-  const now = new Date();
 
   // ---------- Bühne (Telefon) ----------
   const stage = (
-    <div
-      className="stage"
-      style={{
-        position: 'relative', width: W, height: H, overflow: 'hidden',
-        borderRadius: mobile ? 0 : 44, background: bg, transition: 'background 1.6s ease',
-        fontFamily: "'Nunito Sans', sans-serif", color: '#F5EFE4',
-        transform: `scale(${k})`, transformOrigin: '0 0',
-      }}
-    >
-      <div aria-hidden="true" style={sx(`position: absolute; inset: 0; background: radial-gradient(circle at 50% ${glowPx}px, rgba(242,180,90,0.34) 0%, rgba(192,138,107,0.14) ${Math.round(0.3 * 844 * v)}px, rgba(43,36,48,0) ${Math.round(0.64 * 844 * v)}px); opacity: ${showCandle ? warmBg : 0}; transition: opacity 1.6s ease`)} />
-
-      {ph === 'lock' && (
-        <div aria-hidden="true" style={sx('position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 0%, #3A3140 0%, #241E29 55%, #1A1620 100%)')} />
-      )}
-
-      <div style={{ position: 'absolute', left: colLeft, width: 390, top: 0, height: H }}>
-        {ph === 'lock' && (
-          <>
-            <div style={sx('position: absolute; left: 0; right: 0; top: 96px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #F5EFE4')}>
-              <p style={sx('margin: 0; font-size: 16px; font-weight: 600; color: #E6DACB')}>{longLabel(keyOf(now))}</p>
-              <p style={sx('margin: 0; font-size: 84px; font-weight: 300; line-height: 1; letter-spacing: -0.02em')}>{clockLabel(now)}</p>
-            </div>
-            <button type="button" onClick={() => go('home')} aria-label="Abrir notificación de Vela" style={sx(`position: absolute; left: 14px; right: 14px; top: ${T(300)}px; padding: 14px 16px; border-radius: 22px; border: 1px solid rgba(245,239,228,0.12); background: rgba(245,239,228,0.1); color: #F5EFE4; display: flex; gap: 12px; align-items: flex-start; text-align: left; cursor: pointer`)}>
-              <span aria-hidden="true" style={sx('width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; background: #2B2430; display: flex; align-items: center; justify-content: center')}>
-                <span style={sx('width: 10px; height: 16px; border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%; background: radial-gradient(circle at 50% 72%, #FFF1CF 0%, #F6C66E 45%, #F0A24E 100%)')} />
+    <AppCtx.Provider value={ctx}>
+      <div className="stage" style={{ position: 'relative', width: W, height: H, overflow: 'hidden', borderRadius: mobile ? 0 : 44, background: bg, transition: 'background 1.6s ease', fontFamily: "'Nunito Sans', sans-serif", color: '#F5EFE4', transform: `scale(${k})`, transformOrigin: '0 0' }}>
+        {/* Nachthimmel mit Sternen */}
+        <div aria-hidden="true" className="sky" style={sx(`position: absolute; inset: 0; background: linear-gradient(to top, #050409 0%, rgba(6,5,11,0.97) 8%, rgba(9,7,15,0.88) 16%, rgba(14,11,21,0.72) 24%, rgba(20,16,28,0.56) 32%, rgba(26,21,36,0.48) 40%, rgba(30,25,44,0.56) 47%, rgba(34,29,52,0.72) 54%, rgba(36,31,56,0.88) 61%, #231F3A 68%, #1C1931 76%, #15132A 84%, #0F0D21 92%, #0A0918 100%); opacity: ${skyOp}; transition: opacity 1.6s ease; pointer-events: none`)}>
+          <div style={{ position: 'absolute', left: colLeft, top: 0, width: 390, height: H }}>
+            {STARS.map((s, i) => (
+              <span key={i} style={sx(`position: absolute; left: ${s.x}px; top: ${Math.round(s.y * v)}px; width: ${s.s}px; height: ${s.s}px; opacity: ${s.o}`)}>
+                <span className="twk" style={sx(`display: block; width: 100%; height: 100%; border-radius: 50%; background: #F7EEDC; box-shadow: 0 0 ${s.g}px rgba(247,238,220,0.6); animation-duration: ${s.d}s; animation-delay: ${s.dl}s`)} />
               </span>
-              <span style={sx('display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1')}>
-                <span style={sx('display: flex; justify-content: space-between; font-size: 13px; color: #CDBFAE')}><span style={sx('font-weight: 700; letter-spacing: 0.04em')}>VELA</span><span>ahora</span></span>
-                <span style={sx('font-size: 15px; font-weight: 700')}>El día se va apagando.</span>
-                <span style={sx('font-size: 15px; line-height: 1.4; color: #E6DACB')}>¿Quieres cerrarlo con tres momentos?</span>
-              </span>
-            </button>
-            <p className="fadehint" style={sx(`position: absolute; left: 0; right: 0; top: ${T(420)}px; margin: 0; text-align: center; font-size: 13px; color: #CDBFAE`)}>Toca la notificación</p>
-          </>
-        )}
-
-        {isHome && (
-          <div style={sx('position: absolute; top: 54px; left: 24px; right: 24px; display: flex; justify-content: space-between; align-items: center; z-index: 2')}>
-            <p style={sx('margin: 0; font-size: 14px; color: #CDBFAE')}>{cap(longLabel(today))}</p>
-            <button type="button" aria-label="Ajustes" onClick={() => go('settings')} style={sx(BACK_BTN)}><Icon name="tuning-2-linear" size={20} /></button>
+            ))}
           </div>
-        )}
-
-        {inputPh && (
-          <div style={sx('position: absolute; top: 54px; left: 24px; right: 24px; height: 44px; display: flex; justify-content: center; align-items: center; z-index: 2')}>
-            {IN[inputPh].back && (
-              <button type="button" aria-label="Atrás" onClick={() => go(IN[inputPh].back!)} style={sx('position: absolute; left: 0; top: 0; ' + BACK_BTN)}><Icon name="alt-arrow-left-linear" size={20} /></button>
-            )}
-            {IN[inputPh].skip && (
-              <button type="button" onClick={() => go(IN[inputPh].skipTo!)} style={sx('position: absolute; right: 0; top: 0; height: 44px; padding: 0 4px; border: none; background: transparent; color: #CDBFAE; font-size: 14px; cursor: pointer')}>{IN[inputPh].skip}</button>
-            )}
-            <div role="img" aria-label={'Paso ' + (dotIdx + 1) + ' de 3'} style={sx('display: flex; gap: 8px; align-items: center')}>
-              {[0, 1, 2].map((i) => {
-                const on = i === dotIdx, done = i < dotIdx, c = i === 1 ? COOL : GOLD;
-                return <span key={i} style={sx(`width: ${on ? 24 : 8}px; height: 8px; border-radius: 4px; background: ${on || done ? c : 'transparent'}; border: 1.5px solid ${on || done ? c : 'rgba(245,239,228,0.35)'}; transition: all .8s`)} />;
-              })}
-            </div>
-          </div>
-        )}
-
-        {showCandle && (
-          <Candle
-            cfg={cfg}
-            top={Math.round(CT[0] * v)}
-            scale={r2(CT[1] * v)}
-            ringOp={ph === 'lighting' ? 1 : 0}
-            ringOff={Math.round((1 - prog) * 1000) / 1000}
-            showWickHint={isHome && !isDone && doneCount < 3}
-            canHold={(isHome && !isDone) || ph === 'lighting'}
-            onHoldDown={onHoldDown}
-            onHoldUp={holdUp}
-            onKeyDown={onKeyDown}
-            onKeyUp={onKeyUp}
-          />
-        )}
-
-        {ph === 'intro' && (
-          <div style={sx(`position: absolute; left: 32px; right: 32px; top: ${T(550)}px; bottom: 36px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px`)}>
-            <h1 style={sx(H1 + '; font-size: 32px; line-height: 1.2')}>Hola, soy Vela.</h1>
-            <p style={sx('margin: 0; font-size: 16px; line-height: 1.55; color: #CDBFAE')}>Cada noche, tres momentos: algo bueno, algo difícil y otra vez algo bueno. No hace falta más.</p>
-            <div style={sx('flex-grow: 1')} />
-            <button
-              type="button"
-              onClick={() => { setSettings({ onboarded: true }); navigator.storage?.persist?.().catch(() => undefined); go('home'); }}
-              style={sx('width: 100%; min-height: 58px; border-radius: 29px; border: none; background: #F2B45A; color: #2B2430; font-size: 17px; font-weight: 700; cursor: pointer; flex-shrink: 0')}
-            >Enciende tu primera luz</button>
-            <p style={sx('margin: 0; font-size: 13px; color: #CDBFAE')}>Tus momentos son solo tuyos.</p>
-          </div>
-        )}
-
-        {isHome && !isDone && (
-          <div style={sx(`position: absolute; left: 32px; right: 32px; top: ${T(550)}px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 18px; pointer-events: none`)}>
-            <h1 style={sx(H1 + '; font-size: 30px; line-height: 1.22')}>{todayEntry?.done ? 'Aquí sigo, si quieres más.' : 'Aquí estoy, cuando quieras.'}</h1>
-            <p style={sx('margin: 0; padding: 8px 16px; border-radius: 16px; background: rgba(245,239,228,0.07); font-size: 14px; color: #E6DACB')}>Mantén pulsada la mecha</p>
-          </div>
-        )}
-
-        {isDone && (
-          <div style={sx('position: absolute; left: 28px; right: 28px; top: 112px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px')}>
-            <h1 style={sx(H1 + '; font-size: 30px')}>Que descanses.</h1>
-            {doneLines.length > 0 && (
-              <div style={sx('width: 100%; padding: 16px 18px; border-radius: 20px; background: rgba(245,239,228,0.06); text-align: left; display: flex; flex-direction: column; gap: 10px')}>
-                <p style={sx('margin: 0; font-size: 13px; font-weight: 700; color: #E6DACB')}>Tu día</p>
-                {doneLines.map((m, i) => (
-                  <div key={i} style={sx('display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45; color: #F5EFE4')}>
-                    <span style={sx(`width: 8px; height: 8px; border-radius: 4px; margin-top: 6px; flex-shrink: 0; background: ${m.ring}`)} />{m.text}
-                  </div>
-                ))}
-              </div>
-            )}
-            <p style={sx('margin: 0; font-size: 14px; color: #CDBFAE')}>Mañana por la noche te espera tu luz.</p>
-            <div style={sx('display: flex; gap: 10px; justify-content: center; flex-wrap: wrap')}>
-              <button type="button" onClick={() => go('mirror')} style={sx(GHOST)}>Ver tu día</button>
-              <button type="button" onClick={() => update({ relight: true })} style={sx(GHOST)}>Volver a encender</button>
-            </div>
-          </div>
-        )}
-
-        {ph === 'lighting' && (
-          <div aria-live="polite" style={sx(`position: absolute; left: 32px; right: 32px; top: ${T(550)}px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; pointer-events: none`)}>
-            <h1 style={sx(H1 + '; font-size: 30px; line-height: 1.22')}>{prog < 0.5 ? 'Inhala conmigo.' : 'Y exhala despacio.'}</h1>
-            <p style={sx('margin: 0; font-size: 15px; color: #CDBFAE')}>Deja el dedo sobre la mecha.</p>
-          </div>
-        )}
-
-        {ph === 'lit' && (
-          <div style={sx(`position: absolute; left: 32px; right: 32px; top: ${T(550)}px; text-align: center`)}>
-            <h1 style={sx(H1 + '; font-size: 30px')}>Tu luz está encendida.</h1>
-          </div>
-        )}
-
-        {renderInput()}
-        {ph === 'mirror' && renderMirror()}
-
-        {ph === 'remind' && (
-          <div style={sx('position: absolute; left: 28px; right: 28px; top: 112px; bottom: 28px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px')}>
-            <h1 style={sx(H1 + '; font-size: 28px')}>Qué bien que hayas venido.</h1>
-            <p style={sx('margin: 0; font-size: 15px; line-height: 1.5; color: #CDBFAE')}>¿Quieres que mañana por la noche te lo recuerde con suavidad?</p>
-            <div style={sx('display: flex; gap: 10px; margin-top: 6px')}>
-              {['21:00', '21:30', '22:00'].map((tm) => {
-                const on = data.settings.remindTime === tm;
-                return <button key={tm} type="button" aria-pressed={on} onClick={() => setSettings({ remindTime: tm })} style={sx(`min-width: 84px; height: 46px; border-radius: 23px; border: 1px solid ${on ? GOLD : 'rgba(245,239,228,0.22)'}; background: ${on ? 'rgba(242,180,90,0.18)' : 'transparent'}; color: #F5EFE4; font-size: 15px; font-weight: 600; cursor: pointer`)}>{tm}</button>;
-              })}
-            </div>
-            <p style={sx('margin: 0; font-size: 13px; color: #CDBFAE')}>Solo una vez por la noche. Puedes cambiarlo cuando quieras.</p>
-            <div style={sx('flex-grow: 1')} />
-            <button
-              type="button"
-              onClick={() => { addReminderToCalendar(dataRef.current.settings.remindTime); setSettings({ remindAsked: true, remindOn: true }); update({ toast: 'Abre el archivo para añadirlo a tu calendario.' }); go('now'); }}
-              style={sx(PRIMARY + '; flex-shrink: 0')}
-            >Sí, por favor</button>
-            <button type="button" onClick={() => { setSettings({ remindAsked: true }); go('now'); }} style={sx('min-height: 44px; border: none; background: transparent; color: #E6DACB; font-size: 15px; cursor: pointer')}>Mejor no</button>
-          </div>
-        )}
-
-        {ph === 'now' && (
-          <>
-            <button type="button" aria-label="Volver a tu día" onClick={() => go('mirror')} style={sx('position: absolute; left: 24px; top: 54px; z-index: 2; ' + BACK_BTN)}><Icon name="alt-arrow-left-linear" size={20} /></button>
-            <div style={sx('position: absolute; left: 32px; right: 32px; top: 112px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px')}>
-              <h1 style={sx(H1 + '; font-size: 28px')}>Tu día ya puede descansar.</h1>
-              <p style={sx('margin: 0; font-size: 15px; line-height: 1.5; color: #CDBFAE')}>Quédate todo el tiempo que quieras. O sigue hacia donde te lleve el momento.</p>
-            </div>
-            <div style={sx(`position: absolute; left: 0; right: 0; top: ${T(290)}px; display: flex; flex-direction: column; align-items: center`)}>
-              <button type="button" onClick={() => go('stay')} style={sx(OPTION)}><span style={sx('color: #F2B45A; display: flex')}><Icon name="fire-linear" size={18} /></span>Quedarme con la vela</button>
-              <button type="button" onClick={() => go('journal')} style={sx(OPTION)}><span style={sx('color: #F2B45A; display: flex')}><Icon name="notebook-linear" size={18} /></span>Escribir en mi diario</button>
-              <a href={SPOTIFY_URL} target="_blank" rel="noopener noreferrer" style={sx(OPTION)}><span style={sx('color: #F2B45A; display: flex')}><Icon name="music-notes-linear" size={18} /></span>Escuchar música tranquila</a>
-              <button type="button" onClick={() => go('blow')} style={sx(OPTION + '; border-bottom: none')}><span style={sx('color: #F2B45A; display: flex')}><Icon name="moon-sleep-linear" size={18} /></span>Irme a dormir</button>
-            </div>
-          </>
-        )}
-
-        {ph === 'stay' && (
-          <p className="fadehint" style={sx('position: absolute; left: 0; right: 0; top: 140px; margin: 0; text-align: center; font-size: 13px; color: #CDBFAE; pointer-events: none')}>Toca en cualquier lugar para volver</p>
-        )}
-
-        {ph === 'journal' && (
-          <>
-            <div style={sx('position: absolute; left: 32px; right: 32px; top: 112px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; pointer-events: none')}>
-              <h1 style={sx(H1 + '; font-size: 28px; line-height: 1.25')}>Coge tu libreta y tu bolígrafo.</h1>
-              <p style={sx('margin: 0; font-size: 15px; line-height: 1.55; color: #CDBFAE')}>Escribe lo que aún quiera salir. Vela te acompaña.</p>
-            </div>
-            <p className="fadehint" style={sx(`position: absolute; left: 0; right: 0; top: ${T(400)}px; margin: 0; text-align: center; font-size: 13px; color: #CDBFAE; pointer-events: none`)}>Toca en cualquier lugar para volver</p>
-          </>
-        )}
-
-        {ph === 'blow' && (
-          <>
-            <div style={sx('position: absolute; left: 32px; right: 32px; top: 112px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px')}>
-              <h1 style={sx(H1 + '; font-size: 28px; line-height: 1.25')}>Cuando quieras, apágala.</h1>
-              <p style={sx('margin: 0; font-size: 15px; line-height: 1.55; color: #CDBFAE')}>Toca la llama.</p>
-            </div>
-            <button type="button" aria-label="Apagar la vela" onClick={blowOut} style={sx(`position: absolute; left: 115px; top: ${T(330)}px; width: 160px; height: ${T(240)}px; border-radius: 80px; border: none; background: transparent; cursor: pointer`)} />
-          </>
-        )}
-
-        {ph === 'sleep' && (
-          <div style={sx('position: absolute; left: 32px; right: 32px; top: 120px; text-align: center')}>
-            <h1 style={sx(H1 + '; font-size: 32px')}>Que descanses.</h1>
-          </div>
-        )}
-
-        {ph === 'review' && renderReview()}
-        {ph === 'highs' && renderHighs()}
-        {ph === 'settings' && renderSettings()}
-      </div>
-
-      {(ph === 'stay' || ph === 'journal') && (
-        <button type="button" aria-label="Volver a las opciones" onClick={() => go('now')} style={sx('position: absolute; inset: 0; border: none; background: transparent; cursor: pointer')} />
-      )}
-
-      {showNav && (
-        <nav aria-label="Navegación principal" style={sx(`position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; padding: 12px 24px 30px; border-top: 1px solid rgba(245,239,228,0.08); background: ${bg}; transition: background 1.6s ease; z-index: 3`)}>
-          <div style={sx('display: flex; justify-content: space-around; width: 342px')}>
-            {([
-              { id: 'home' as const, label: 'Hoy', icon: 'moon-stars' as const },
-              { id: 'review' as const, label: 'Resumen', icon: 'calendar-mark' as const },
-              { id: 'highs' as const, label: 'Highs', icon: 'star-shine' as const },
-            ]).map((tb) => {
-              const on = tb.id === tabPh;
-              return (
-                <button key={tb.id} type="button" aria-current={on ? 'page' : undefined} onClick={() => go(tb.id)} style={sx(`min-width: 72px; min-height: 48px; border: none; background: transparent; color: ${on ? GOLD : '#CDBFAE'}; font-size: 12px; font-weight: ${on ? 700 : 400}; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer`)}>
-                  <Icon name={on ? `${tb.icon}-bold-duotone` : `${tb.icon}-linear`} size={24} />
-                  {tb.label}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-      )}
-
-      {st.breathing && (
-        <div style={sx('position: absolute; inset: 0; background: #221D28; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; z-index: 5')}>
-          <div style={sx('position: relative; width: 240px; height: 240px; display: flex; align-items: center; justify-content: center')}>
-            <div className="breath" style={sx('position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(242,180,90,0.5) 0%, rgba(242,180,90,0.14) 55%, rgba(242,180,90,0) 72%)')} />
-            <p className="bin" style={sx(H1 + '; position: absolute; font-size: 24px')}>Inhala</p>
-            <p className="bout" style={sx(H1 + '; position: absolute; font-size: 24px')}>Exhala</p>
-          </div>
-          <button type="button" onClick={() => update({ breathing: false })} style={sx('min-width: 160px; height: 50px; border-radius: 25px; border: 1px solid rgba(245,239,228,0.25); background: transparent; color: #F5EFE4; font-size: 15px; cursor: pointer')}>Listo</button>
         </div>
-      )}
+        {/* Warmer Raum-Glow um die Flamme */}
+        <div aria-hidden="true" style={sx(`position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% ${glowPx}px, rgba(242,180,90,0.34) 0%, rgba(192,138,107,0.14) ${Math.round(0.3 * 844 * v)}px, rgba(43,36,48,0) ${Math.round(0.64 * 844 * v)}px); opacity: ${showC && !st.leaving ? warmBg : 0}; transition: opacity 1.6s ease`)} />
+        {ph === 'inward' && <div aria-hidden="true" style={sx(`position: absolute; left: 50%; top: ${T(250)}px; width: 420px; height: 420px; margin-left: -210px; border-radius: 50%; background: radial-gradient(circle, rgba(201,182,228,0.16) 0%, rgba(201,182,228,0) 65%); pointer-events: none`)} />}
+        {ph === 'lock' && <div aria-hidden="true" style={sx('position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 0%, #3A3140 0%, #241E29 55%, #1A1620 100%)')} />}
 
-      {st.toast && (
-        <div role="status" style={sx('position: absolute; left: 20px; right: 20px; top: 104px; z-index: 8; padding: 12px 16px; border-radius: 16px; background: rgba(58,49,64,0.97); border: 1px solid rgba(245,239,228,0.12); color: #F5EFE4; font-size: 14px; line-height: 1.45; text-align: center; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.6)')}>{st.toast}</div>
-      )}
+        <div style={{ position: 'absolute', left: colLeft, width: 390, top: 0, height: H }}>
+          <Candle cfg={cfg} top={Math.round(CT[0] * v)} scale={r2(CT[1] * v * (showC ? 1 : 0.92))} opacity={showC && !st.leaving ? 1 : 0} ringOp={ph === 'lighting' ? 1 : 0} ringOff={Math.round((1 - prog) * 1000) / 1000} showWickHint={isHome && !isDone && nights < 3} />
 
-      {TEST && ph !== 'intro' && (
-        <button type="button" aria-label="Reiniciar prototipo" title="Reiniciar prototipo" onClick={reset} style={sx('position: absolute; left: 50%; top: 6px; margin-left: -22px; width: 44px; height: 44px; border-radius: 22px; border: none; background: transparent; color: rgba(245,239,228,0.45); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 6')}>
-          <Icon name="restart-linear" size={18} />
-        </button>
-      )}
-      {mobile && TEST && (
-        <button type="button" onClick={() => setSheetOpen(true)} aria-haspopup="dialog" style={sx('position: absolute; right: 10px; top: 10px; height: 32px; padding: 0 12px; border-radius: 16px; border: none; background: rgba(245,239,228,0.07); color: rgba(245,239,228,0.6); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; z-index: 6')}>
-          <Icon name="hamburger-menu-linear" size={14} />Pantallas
-        </button>
-      )}
-    </div>
+          {ph === 'lock' && (
+            <>
+              <div style={sx('position: absolute; left: 0; right: 0; top: 96px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #F5EFE4')}>
+                <p style={sx('margin: 0; font-size: 16px; font-weight: 600; color: #E6DACB')}>{longLabel(keyOf(headDate))}</p>
+                <p style={sx('margin: 0; font-size: 84px; font-weight: 300; line-height: 1; letter-spacing: -0.02em')}>{demo ? '21:30' : `${headDate.getHours()}:${pad(headDate.getMinutes())}`}</p>
+              </div>
+              <button type="button" onClick={() => go('home')} aria-label="Abrir notificación de Vela" style={sx(`position: absolute; left: 14px; right: 14px; top: ${T(300)}px; padding: 14px 16px; border-radius: 22px; border: 1px solid rgba(245,239,228,0.12); background: rgba(245,239,228,0.1); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); color: #F5EFE4; display: flex; gap: 12px; align-items: flex-start; text-align: left; cursor: pointer; font-family: inherit`)}>
+                <span aria-hidden="true" style={sx('width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; background: #2B2430; display: flex; align-items: center; justify-content: center')}><span style={sx('width: 10px; height: 16px; border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%; background: radial-gradient(circle at 50% 72%, #FFF1CF 0%, #F6C66E 45%, #F0A24E 100%)')} /></span>
+                <span style={sx('display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1')}>
+                  <span style={sx('display: flex; justify-content: space-between; font-size: 13px; color: #CDBFAE')}><span style={sx('font-weight: 700; letter-spacing: 0.04em')}>VELA</span><span>ahora</span></span>
+                  <span style={sx('font-size: 15px; font-weight: 700')}>El día se va apagando.</span>
+                  <span style={sx('font-size: 15px; line-height: 1.4; color: #E6DACB')}>¿Quieres cerrarlo con tres momentos?</span>
+                </span>
+              </button>
+              <p className="fadehint" style={sx(`position: absolute; left: 0; right: 0; top: ${T(420)}px; margin: 0; text-align: center; font-size: 13px; color: #CDBFAE`)}>Toca la notificación</p>
+            </>
+          )}
+
+          {/* Kopfzeile mit Datum und Mond */}
+          {(ph === 'intro' || isHome || ph === 'lighting' || ph === 'lit') && (
+            <div style={sx('position: absolute; top: 46px; left: 24px; right: 18px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; z-index: 1')}>
+              <div style={sx('display: flex; flex-direction: column; gap: 3px')}>
+                <p data-testid="fecha" style={sx('margin: 0; font-size: 14px; color: #CDBFAE')}>{dateLabel}</p>
+                <p style={sx('margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(205,191,174,0.7)')}>{moon.name} · {moon.pct} %</p>
+              </div>
+              <div role="img" aria-label={moon.aria} style={sx('position: relative; width: 88px; height: 88px; display: flex; align-items: center; justify-content: center')}>
+                <span className="mglow" aria-hidden="true" style={sx(`position: absolute; inset: -18px; border-radius: 50%; background: radial-gradient(circle, rgba(243,230,207,0.22) 0%, rgba(243,230,207,0.05) 50%, rgba(243,230,207,0) 72%); opacity: ${moon.glow}`)} />
+                <svg aria-hidden="true" width="78" height="78" viewBox="-22 -22 44 44" style={{ position: 'relative', overflow: 'visible' }}>
+                  <defs>
+                    <radialGradient id="dSurf" cx="0.42" cy="0.38" r="0.75"><stop offset="0" stopColor="#FBF3E4" /><stop offset="0.6" stopColor="#E9DAC0" /><stop offset="1" stopColor="#CDB99B" /></radialGradient>
+                    <clipPath id="dLit"><path d={moon.d19} /></clipPath>
+                    <filter id="dSoft" x="-0.2" y="-0.2" width="1.4" height="1.4"><feGaussianBlur stdDeviation="0.5" /></filter>
+                  </defs>
+                  <circle r="19" fill="rgba(243,230,207,0.06)" stroke="rgba(245,239,228,0.32)" strokeWidth="0.5" />
+                  <g filter="url(#dSoft)"><path d={moon.d19} fill="url(#dSurf)" /></g>
+                  <g clipPath="url(#dLit)" fill="#B9A487"><circle cx="-5.1" cy="-6.6" r="3.3" opacity="0.28" /><circle cx="5.8" cy="-2.2" r="2.2" opacity="0.22" /><circle cx="1.5" cy="7.3" r="4" opacity="0.2" /><circle cx="9.5" cy="8" r="1.5" opacity="0.25" /><circle cx="-8.8" cy="5.1" r="1.8" opacity="0.2" /><circle cx="11" cy="-9.5" r="1.3" opacity="0.25" /></g>
+                </svg>
+              </div>
+            </div>
+          )}
+
+          {inputPh && (
+            <div style={sx('position: absolute; top: 54px; left: 24px; right: 24px; height: 44px; display: flex; justify-content: center; align-items: center; z-index: 2')}>
+              {IN[inputPh].back && <button type="button" aria-label="Atrás" onClick={() => go(IN[inputPh].back!)} style={sx('position: absolute; left: 0; top: 0; ' + BACK_BTN)}><Icon name="alt-arrow-left-linear" size={20} /></button>}
+              {IN[inputPh].skip && <button type="button" onClick={() => go(IN[inputPh].skipTo!)} style={sx('position: absolute; right: 0; top: 0; height: 44px; padding: 0 4px; border: none; background: transparent; color: #CDBFAE; font-size: 14px; cursor: pointer; font-family: inherit')}>{IN[inputPh].skip}</button>}
+              <div role="img" aria-label={'Paso ' + (dotIdx + 1) + ' de 3'} style={sx('display: flex; gap: 8px; align-items: center')}>
+                {[0, 1, 2].map((i) => { const on = i === dotIdx, dn = i < dotIdx, c = i === 1 ? COOL : GOLD; return <span key={i} style={sx(`width: ${on ? 24 : 8}px; height: 8px; border-radius: 4px; background: ${on || dn ? c : 'transparent'}; border: 1.5px solid ${on || dn ? c : 'rgba(245,239,228,0.35)'}; transition: all .8s`)} />; })}
+              </div>
+            </div>
+          )}
+
+          {ph === 'intro' && (
+            <div className="softin" style={sx(`position: absolute; left: 32px; right: 32px; top: ${T(550)}px; bottom: 36px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px`)}>
+              <h1 style={sx(H1 + '; font-size: 32px; line-height: 1.2')}>Hola, soy Vela.</h1>
+              <p style={sx('margin: 0; font-size: 16px; line-height: 1.55; color: #CDBFAE')}>Cada noche, tres momentos: algo bueno, algo difícil y otra vez algo bueno. No hace falta más.</p>
+              <div style={sx('flex-grow: 1')} />
+              <button type="button" onClick={() => { setSettings({ onboarded: true }); navigator.storage?.persist?.().catch(() => undefined); go('home'); }} style={sx(PRIMARY + '; width: 100%; min-height: 58px; border-radius: 29px; font-size: 17px; flex-shrink: 0')}>Enciende tu primera luz</button>
+              <p style={sx('margin: 0; font-size: 13px; color: #CDBFAE')}>Tus momentos son solo tuyos.</p>
+            </div>
+          )}
+
+          {isHome && !isDone && !st.leaving && (
+            <div className="tabin" style={sx(`position: absolute; left: 32px; right: 32px; top: ${T(550)}px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 18px; pointer-events: none`)}>
+              <h1 style={sx(H1 + '; font-size: 30px; line-height: 1.22')}>{todayEntry?.done && !demo ? 'Aquí sigo, si quieres más.' : 'Qué bien que estés aquí.'}</h1>
+              <p style={sx('margin: -8px 0 0; font-size: 17px; line-height: 1.5; color: #CDBFAE')}>¿Cómo ha ido tu día?</p>
+              {!(five && !data.inward.seen && H < 800) && <p style={sx('margin: 0; padding: 8px 16px; border-radius: 16px; background: rgba(245,239,228,0.07); font-size: 14px; color: #E6DACB')}>Deja el dedo en la pantalla</p>}
+            </div>
+          )}
+
+          {isDone && !st.leaving && (
+            <div className="tabin" style={sx('position: absolute; left: 28px; right: 28px; top: 150px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; z-index: 6')}>
+              <h1 style={sx(H1 + '; font-size: 30px')}>Que descanses.</h1>
+              {doneLines.length > 0 && (
+                <div style={sx('width: 100%; padding: 16px 18px; border-radius: 20px; background: rgba(245,239,228,0.06); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); text-align: left; display: flex; flex-direction: column; gap: 10px')}>
+                  <p style={sx('margin: 0; font-size: 13px; font-weight: 700; color: #E6DACB')}>Tu día</p>
+                  {doneLines.map((m, i) => <div key={i} style={sx('display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45; color: #F5EFE4')}><span style={sx(`width: 8px; height: 8px; border-radius: 4px; margin-top: 6px; flex-shrink: 0; background: ${m.ring}`)} />{m.text}</div>)}
+                </div>
+              )}
+              <p style={sx('margin: 0; font-size: 14px; color: #CDBFAE')}>Mañana por la noche te espera tu luz.</p>
+              <div style={sx('display: flex; gap: 10px; justify-content: center; flex-wrap: wrap')}>
+                <button type="button" onClick={() => go('mirror')} style={sx(GHOST)}>Ver tu día</button>
+                <button type="button" onClick={() => update({ relight: true })} style={sx(GHOST)}>Volver al inicio</button>
+              </div>
+            </div>
+          )}
+
+          {ph === 'lighting' && (
+            <div aria-live="polite" style={sx(`position: absolute; left: 32px; right: 32px; top: ${T(550)}px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; pointer-events: none`)}>
+              <h1 style={sx(H1 + '; font-size: 30px; line-height: 1.22')}>{prog < 0.5 ? 'Inhala conmigo.' : 'Y exhala despacio.'}</h1>
+              <p style={sx('margin: 0; font-size: 15px; color: #CDBFAE')}>Deja el dedo en la pantalla.</p>
+            </div>
+          )}
+          {ph === 'lit' && <div className="softin" style={sx(`position: absolute; left: 32px; right: 32px; top: ${T(550)}px; text-align: center`)}><h1 style={sx(H1 + '; font-size: 30px')}>Tu luz está encendida.</h1></div>}
+
+          {renderInput()}
+          {ph === 'mirror' && renderMirror()}
+
+          {ph === 'remind' && (
+            <div className="softin" style={sx('position: absolute; left: 28px; right: 28px; top: 112px; bottom: 28px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px')}>
+              <h1 style={sx(H1 + '; font-size: 28px')}>Qué bien que hayas venido.</h1>
+              <p style={sx('margin: 0; font-size: 15px; line-height: 1.5; color: #CDBFAE')}>¿Quieres que mañana por la noche te lo recuerde con suavidad?</p>
+              <div style={sx('display: flex; gap: 10px; margin-top: 6px')}>
+                {['21:00', '21:30', '22:00'].map((tm) => { const on = data.settings.remindTime === tm; return <button key={tm} type="button" aria-pressed={on} onClick={() => setSettings({ remindTime: tm })} style={sx(`min-width: 84px; height: 46px; border-radius: 23px; border: 1px solid ${on ? '#E6CDA3' : 'rgba(245,239,228,0.22)'}; background: ${on ? 'rgba(230,205,163,0.18)' : 'transparent'}; color: #F5EFE4; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit`)}>{tm}</button>; })}
+              </div>
+              <p style={sx('margin: 0; font-size: 13px; color: #CDBFAE')}>Solo una vez por la noche. Puedes cambiarlo cuando quieras.</p>
+              <div style={sx('flex-grow: 1')} />
+              <button type="button" onClick={() => { addReminderToCalendar(dataRef.current.settings.remindTime); setSettings({ remindAsked: true, remindOn: true }); toast('Abre el archivo para añadirlo a tu calendario.'); go('now'); }} style={sx(PRIMARY + '; width: 100%; flex-shrink: 0')}>Sí, por favor</button>
+              <button type="button" onClick={() => { setSettings({ remindAsked: true }); go('now'); }} style={sx('min-height: 44px; border: none; background: transparent; color: #E6DACB; font-size: 15px; cursor: pointer; font-family: inherit')}>Mejor no</button>
+            </div>
+          )}
+
+          {ph === 'now' && (
+            <>
+              <button type="button" aria-label="Volver a tu día" onClick={() => go('mirror')} style={sx('position: absolute; left: 24px; top: 54px; z-index: 2; ' + BACK_BTN)}><Icon name="alt-arrow-left-linear" size={20} /></button>
+              <div className="softin" style={sx('position: absolute; left: 32px; right: 32px; top: 112px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px')}>
+                <h1 style={sx(H1 + '; font-size: 28px')}>Tu día ya puede descansar.</h1>
+                <p style={sx('margin: 0; font-size: 15px; line-height: 1.5; color: #CDBFAE')}>Quédate todo el tiempo que quieras. O sigue hacia donde te lleve el momento.</p>
+              </div>
+              <div className="softin2" style={sx(`position: absolute; left: 0; right: 0; top: ${T(290)}px; display: flex; flex-direction: column; align-items: center`)}>
+                <button type="button" onClick={() => go('stay')} style={sx(OPTION)}><span style={sx('color: #E6CDA3; display: flex')}><Icon name="fire-linear" size={18} /></span>Quedarme con la vela</button>
+                <button type="button" onClick={() => go('journal')} style={sx(OPTION)}><span style={sx('color: #E6CDA3; display: flex')}><Icon name="notebook-linear" size={18} /></span>Escribir en mi diario</button>
+                <a href={SPOTIFY_URL} target="_blank" rel="noopener noreferrer" style={sx(OPTION)}><span style={sx('color: #E6CDA3; display: flex')}><Icon name="music-notes-linear" size={18} /></span>Escuchar música tranquila</a>
+                <button type="button" onClick={() => go('blow')} style={sx(OPTION + '; border-bottom: none')}><span style={sx('color: #E6CDA3; display: flex')}><Icon name="moon-sleep-linear" size={18} /></span>Irme a dormir</button>
+              </div>
+            </>
+          )}
+
+          {ph === 'stay' && <p className="fadehint" style={sx('position: absolute; left: 0; right: 0; top: 140px; margin: 0; text-align: center; font-size: 13px; color: #CDBFAE; pointer-events: none')}>Toca en cualquier lugar para volver</p>}
+          {ph === 'journal' && (
+            <>
+              <div className="softin" style={sx('position: absolute; left: 32px; right: 32px; top: 112px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; pointer-events: none')}>
+                <h1 style={sx(H1 + '; font-size: 28px; line-height: 1.25')}>Coge tu libreta y tu bolígrafo.</h1>
+                <p style={sx('margin: 0; font-size: 15px; line-height: 1.55; color: #CDBFAE')}>Escribe lo que aún quiera salir. Vela te acompaña.</p>
+              </div>
+              <p className="fadehint" style={sx(`position: absolute; left: 0; right: 0; top: ${T(400)}px; margin: 0; text-align: center; font-size: 13px; color: #CDBFAE; pointer-events: none`)}>Toca en cualquier lugar para volver</p>
+            </>
+          )}
+          {ph === 'blow' && (
+            <>
+              <div className="softin" style={sx('position: absolute; left: 32px; right: 32px; top: 112px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px')}>
+                <h1 style={sx(H1 + '; font-size: 28px; line-height: 1.25')}>Cuando quieras, apágala.</h1>
+                <p style={sx('margin: 0; font-size: 15px; line-height: 1.55; color: #CDBFAE')}>Toca la llama.</p>
+              </div>
+              <button type="button" aria-label="Apagar la vela" onClick={blowOut} style={sx(`position: absolute; left: 115px; top: ${T(300)}px; width: 160px; height: ${T(240)}px; border-radius: 80px; border: none; background: transparent; cursor: pointer`)} />
+            </>
+          )}
+          {ph === 'sleep' && <div className="softin" style={sx('position: absolute; left: 32px; right: 32px; top: 120px; text-align: center')}><h1 style={sx(H1 + '; font-size: 32px')}>Que descanses.</h1></div>}
+        </div>
+
+        {/* Reiter (eigener Scroll) */}
+        {isTab && (
+          <div key={ph} style={{ position: 'absolute', left: colLeft, width: 390, top: 0, height: H, opacity: st.leaving ? 0 : 1, transition: 'opacity .28s ease' }}>
+            {ph === 'highs' && <Highs />}
+            {ph === 'patterns' && <Patrones />}
+            {ph === 'review' && <Diario />}
+            {ph === 'inward' && <Dentro />}
+            {ph === 'settings' && <Ajustes onExport={exportData} onDeleteAll={deleteAll} />}
+          </div>
+        )}
+
+        {(ph === 'stay' || ph === 'journal') && <button type="button" aria-label="Volver a las opciones" onClick={() => go('now')} style={sx('position: absolute; inset: 0; border: none; background: transparent; cursor: pointer')} />}
+
+        {/* Halte-Fläche: Finger irgendwo auf dem Screen */}
+        {canHold && (
+          <button type="button" className="wick" aria-label="Encender la vela: deja el dedo en la pantalla" onPointerDown={onHoldDown} onPointerUp={holdUp} onPointerCancel={holdUp} onLostPointerCapture={holdUp} onKeyDown={onKeyDown} onKeyUp={onKeyUp} onContextMenu={(e) => e.preventDefault()}
+            style={sx(`position: absolute; left: 0; right: 0; top: 0; bottom: ${isHome ? 96 : 0}px; z-index: 5; border: none; background: transparent; cursor: pointer`)} />
+        )}
+
+        {showNav && (
+          <>
+            <div aria-hidden="true" style={sx('position: absolute; left: 0; right: 0; bottom: 0; height: 220px; background: linear-gradient(to top, rgba(6,5,10,1) 0%, rgba(6,5,10,0.94) 22%, rgba(6,5,10,0.72) 42%, rgba(6,5,10,0.42) 62%, rgba(6,5,10,0.16) 82%, rgba(6,5,10,0) 100%); pointer-events: none; z-index: 3')} />
+            <nav aria-label="Navegación principal" style={sx('position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 32px; background: rgba(36,31,48,0.62); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); border: 1px solid rgba(245,239,228,0.1); box-shadow: 0 18px 40px -16px rgba(0,0,0,0.7), inset 0 1px 0 rgba(245,239,228,0.06); z-index: 7')}>
+              <span aria-hidden="true" style={sx(`position: absolute; top: 6px; left: ${navX}px; width: ${TAB_W[navActive]}px; height: 48px; border-radius: 24px; background: #E6CDA3; box-shadow: 0 6px 18px -8px rgba(230,205,163,0.55); transition: left .65s cubic-bezier(0.4, 0, 0.2, 1), width .65s cubic-bezier(0.4, 0, 0.2, 1)`)} />
+              {navTabs.map((t) => {
+                const on = t === navActive;
+                const pulse = t === 'inward' && !on && isHome && !isDone && !data.inward.seen;
+                return (
+                  <button key={t} type="button" aria-current={on ? 'page' : undefined} aria-label={TAB_LABEL[t]} onClick={() => tabGo(t)} className={pulse ? 'navpulse' : undefined}
+                    style={sx(`position: relative; z-index: 1; height: 48px; width: ${on ? TAB_W[t] : inW}px; padding: 0; border-radius: 24px; border: none; background: transparent; color: ${on ? '#2B2430' : t === 'inward' ? '#DCCDF0' : '#CDBFAE'}; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: ${on ? 8 : 0}px; cursor: pointer; overflow: hidden; font-family: inherit; transition: width .65s cubic-bezier(0.4, 0, 0.2, 1), color .5s ease, gap .65s cubic-bezier(0.4, 0, 0.2, 1)`)}>
+                    {navIcon(t, on)}
+                    <span aria-hidden="true" style={sx(`display: inline-block; max-width: ${on ? 80 : 0}px; opacity: ${on ? 1 : 0}; overflow: hidden; white-space: nowrap; transition: max-width .65s cubic-bezier(0.4, 0, 0.2, 1), opacity .45s ease ${on ? 0.2 : 0}s`)}>{TAB_LABEL[t]}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </>
+        )}
+
+        {/* Hinweis ab 14 Nächten: Introspección (Stern fällt zum Dentro-Punkt) */}
+        {isHome && !isDone && five && !st.leaving && !data.inward.seen && (
+          <>
+            <span aria-hidden="true" className="starfall" style={sx(`position: absolute; left: ${W / 2 + 126}px; top: ${H - 110}px; width: 6px; height: 6px; border-radius: 3px; z-index: 8; background: #F4EEFF; box-shadow: 0 0 10px 3px rgba(220,205,245,0.9); pointer-events: none`)} />
+            <button type="button" onClick={() => tabGo('inward')} className="softin" style={sx(`position: absolute; right: ${colLeft + 18}px; bottom: 116px; z-index: 6; height: 38px; padding: 0 14px 0 10px; border-radius: 19px; border: 1px solid rgba(201,182,228,0.45); background: rgba(58,44,88,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #F4EEFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit; white-space: nowrap; box-shadow: 0 0 20px -4px rgba(201,182,228,0.6)`)}>
+              <span aria-hidden="true" className="orb" style={sx('width: 8px; height: 8px; border-radius: 4px; background: #EDE3F8; box-shadow: 0 0 8px 2px rgba(201,182,228,0.8)')} />Nuevo · Introspección, aquí abajo
+            </button>
+          </>
+        )}
+
+        {st.breathing && (
+          <div style={sx('position: absolute; inset: 0; background: #221D28; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; z-index: 9')}>
+            <div style={sx('position: relative; width: 240px; height: 240px; display: flex; align-items: center; justify-content: center')}>
+              <div className="breath" style={sx('position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(242,180,90,0.5) 0%, rgba(242,180,90,0.14) 55%, rgba(242,180,90,0) 72%)')} />
+              <p className="bin" style={sx(H1 + '; position: absolute; font-size: 24px')}>Inhala</p>
+              <p className="bout" style={sx(H1 + '; position: absolute; font-size: 24px')}>Exhala</p>
+            </div>
+            <button type="button" onClick={() => update({ breathing: false })} style={sx('min-width: 160px; height: 50px; border-radius: 25px; border: 1px solid rgba(245,239,228,0.25); background: transparent; color: #F5EFE4; font-size: 15px; cursor: pointer; font-family: inherit')}>Listo</button>
+          </div>
+        )}
+
+        {st.supOpen && <SupportSheet onClose={() => update({ supOpen: false })} />}
+
+        {st.toast && <div role="status" style={sx('position: absolute; left: 20px; right: 20px; top: 104px; z-index: 10; padding: 12px 16px; border-radius: 16px; background: rgba(46,39,56,0.97); border: 1px solid rgba(245,239,228,0.12); color: #F5EFE4; font-size: 14px; line-height: 1.45; text-align: center; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.6)')}>{st.toast}</div>}
+
+        {TEST && ph !== 'intro' && (
+          <button type="button" aria-label="Reiniciar prototipo" title="Reiniciar prototipo" onClick={reset} style={sx('position: absolute; left: 8px; top: 6px; z-index: 8; width: 40px; height: 40px; border-radius: 22px; border: none; background: transparent; color: rgba(245,239,228,0.45); display: flex; align-items: center; justify-content: center; cursor: pointer')}>
+            <Icon name="restart-linear" size={18} />
+          </button>
+        )}
+        {mobile && TEST && (
+          <button type="button" onClick={() => setSheetOpen(true)} aria-haspopup="dialog" aria-label="Pantallas de prueba" style={sx('position: absolute; left: 50%; margin-left: -22px; top: 6px; z-index: 8; width: 44px; height: 32px; border-radius: 16px; border: none; background: rgba(245,239,228,0.07); color: rgba(245,239,228,0.6); display: flex; align-items: center; justify-content: center; cursor: pointer')}>
+            <Icon name="hamburger-menu-linear" size={16} />
+          </button>
+        )}
+      </div>
+    </AppCtx.Provider>
   );
 
   if (mobile) {
@@ -1337,13 +874,8 @@ export default function App() {
           <>
             <div className="sheet-backdrop" onClick={() => setSheetOpen(false)} />
             <div className="sheet" role="dialog" aria-label="Pantallas del prototipo">
-              <div style={sx('display: flex; justify-content: space-between; align-items: center')}>
-                <p className="testbar-title">Ir directamente a</p>
-                <button type="button" onClick={() => setSheetOpen(false)} style={sx('height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid #D6D0C8; background: transparent; color: #2B2430; font-size: 13px; font-weight: 600; cursor: pointer')}>Cerrar</button>
-              </div>
-              {jumpButtons}
-              {modeLinks}
-              {credit}
+              <div style={sx('display: flex; justify-content: flex-end')}><button type="button" onClick={() => setSheetOpen(false)} style={sx('height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid #D6D0C8; background: transparent; color: #2B2430; font-size: 13px; font-weight: 600; cursor: pointer')}>Cerrar</button></div>
+              {testTools}
             </div>
           </>
         )}
@@ -1355,10 +887,13 @@ export default function App() {
     <div className="page-desktop">
       <div style={{ width: W * k, height: H * k, flexShrink: 0, borderRadius: 44 * k, boxShadow: '0 30px 80px -30px rgba(43,36,48,0.55)' }}>{stage}</div>
       <div className="testbar">
-        <p className="testbar-title">{TEST ? 'Ir directamente a' : 'Vela · High Low High'}</p>
-        {TEST ? jumpButtons : <p style={sx('margin: 0; font-size: 14px; line-height: 1.5; color: #6B5F57')}>Abre esta página en tu móvil y añádela a la pantalla de inicio para usar Vela como una app.</p>}
-        {modeLinks}
-        {credit}
+        {TEST ? testTools : (
+          <>
+            <p className="testbar-title">Vela · High Low High</p>
+            <p style={sx('margin: 0; font-size: 14px; line-height: 1.5; color: #6B5F57')}>Abre esta página en tu móvil y añádela a la pantalla de inicio para usar Vela como una app.</p>
+            <div className="testbar-links"><a href="/?prueba=1">Modo prueba</a><a href="/?noches=14">Ver con 14 noches</a><a href="/?modo=recurrente">Notificación</a></div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1370,20 +905,14 @@ function TypingBox({ label, accent, initial, onDone, onSpeak, onDontKnow }: { la
   const has = !!text.trim();
   return (
     <>
-      <textarea
-        aria-label={label}
-        placeholder="Escribe sin más …"
-        value={text}
-        autoFocus
-        onChange={(e) => setText(e.target.value)}
-        style={sx("width: 100%; height: 100px; padding: 16px 18px; border-radius: 20px; border: 1px solid rgba(245,239,228,0.16); background: rgba(52,44,58,0.9); color: #F5EFE4; font-family: 'Nunito Sans', sans-serif; font-size: 16px; line-height: 1.55; resize: none")}
-      />
-      <button type="button" onClick={() => onDone(text)} disabled={!has} style={sx(`height: 48px; min-width: 180px; padding: 0 32px; border-radius: 24px; border: 1px solid ${has ? accent : 'rgba(245,239,228,0.25)'}; background: ${has ? accent : 'transparent'}; color: ${has ? '#2B2430' : '#F5EFE4'}; font-size: 15px; font-weight: 700; cursor: pointer; transition: background .8s ease, color .8s ease, border-color .8s ease`)}>Listo</button>
+      <textarea aria-label={label} placeholder="Escribe sin más …" value={text} autoFocus onChange={(e) => setText(e.target.value)}
+        style={sx("width: 100%; height: 100px; padding: 16px 18px; border-radius: 20px; border: 1px solid rgba(245,239,228,0.16); background: rgba(40,33,48,0.88); color: #F5EFE4; font-family: 'Nunito Sans', sans-serif; font-size: 16px; line-height: 1.55; resize: none")} />
+      <button type="button" onClick={() => onDone(text)} disabled={!has} style={sx(`height: 48px; min-width: 180px; padding: 0 32px; border-radius: 24px; border: 1px solid ${has ? accent : 'rgba(245,239,228,0.25)'}; background: ${has ? accent : 'transparent'}; color: ${has ? '#2B2430' : '#F5EFE4'}; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background .8s ease, color .8s ease, border-color .8s ease`)}>Listo</button>
       {(onSpeak || onDontKnow) && (
         <div style={sx('display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap')}>
           {onSpeak && <button type="button" onClick={onSpeak} style={sx(LINK_BTN)}>Prefiero hablar</button>}
           {onSpeak && onDontKnow && <span aria-hidden="true" style={sx('color: rgba(205,191,174,0.5)')}>·</span>}
-          {onDontKnow && <button type="button" onClick={onDontKnow} style={sx('min-height: 44px; padding: 0 12px; border: none; background: transparent; color: #CDBFAE; font-size: 15px; cursor: pointer')}>No lo sé</button>}
+          {onDontKnow && <button type="button" onClick={onDontKnow} style={sx('min-height: 44px; padding: 0 12px; border: none; background: transparent; color: #CDBFAE; font-size: 15px; cursor: pointer; font-family: inherit')}>No lo sé</button>}
         </div>
       )}
     </>

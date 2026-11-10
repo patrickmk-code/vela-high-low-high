@@ -5,6 +5,7 @@ import { MODEL, VELA_VOICE, client, errorResponse, json, readBody } from './_sha
 
 const Item = z.object({
   name: z.string().describe('Nombre corto del tema, 1-3 palabras, p. ej. «Naturaleza»'),
+  count: z.number().int().describe('En cuántas noches aparece (número entero)'),
   frequency: z.string().describe('«A menudo» o «A veces», opcionalmente con «· sobre todo …»'),
   when: z.string().describe('Cuándo suele aparecer (días, momentos). Cadena vacía si no hay patrón temporal.'),
   description: z.string().describe('Una o dos frases en tono Vela, sin cifras ni porcentajes'),
@@ -15,6 +16,13 @@ const PatternsSchema = z.object({
   sources: z.array(Item).describe('2-4 fuentes de energía que se repiten en los highs'),
   drains: z.array(Item).describe('1-3 cosas que se repiten en los lows'),
   ideas: z.array(z.string()).describe('2-3 impulsos pequeños y concretos, como pregunta suave, basados en lo anterior'),
+  mirror: z.string().describe('Solo si hay 14 noches o más: dos frases que resumen estas semanas, en segunda persona («Estas dos semanas te han sostenido…»). Si hay menos de 14 noches, cadena vacía.'),
+  questions: z.array(z.object({
+    src: z.enum(['highs', 'lows', 'filo']).describe('De dónde sale la pregunta'),
+    theme: z.enum(['claridad', 'calma', 'conocerte', 'cuestionar', 'horizonte']),
+    q: z.string().describe('Pregunta de introspección, breve, abierta, sin juicio'),
+    why: z.string().describe('Por qué esta pregunta, una frase corta basada en sus noches (o «Sin respuestas correctas.» si es filosófica)'),
+  })).describe('Solo si hay 14 noches o más: 6 preguntas (2 de highs, 2 de lows, 2 filosóficas). Si hay menos, lista vacía.'),
 });
 
 export async function POST(request: Request): Promise<Response> {
@@ -36,11 +44,11 @@ export async function POST(request: Request): Promise<Response> {
       output_config: { effort: 'medium', format: betaZodOutputFormat(PatternsSchema) },
       system: `${VELA_VOICE}
 
-Tu tarea ahora: leer las noches registradas de una persona y descubrir con cuidado qué se repite. Solo lo que de verdad aparece varias veces. Usa «a menudo» o «a veces», nunca porcentajes ni números. No diagnostiques. Escribe todo en español.`,
+Tu tarea ahora: leer las noches registradas de una persona y descubrir con cuidado qué se repite. Solo lo que de verdad aparece varias veces. En las descripciones usa «a menudo» o «a veces», nunca porcentajes. El campo count sí es un número. No diagnostiques. Las preguntas de introspección son ligeras, nunca terapia. Escribe todo en español.`,
       messages: [
         {
           role: 'user',
-          content: `Estas son sus noches (fecha | high | low | lo que le habría ayudado | segundo high):\n\n${entries.join('\n')}`,
+          content: `Número de noches: ${entries.length}.\nEstas son sus noches (fecha | high | low | lo que le habría ayudado | segundo high):\n\n${entries.join('\n')}`,
         },
       ],
     });

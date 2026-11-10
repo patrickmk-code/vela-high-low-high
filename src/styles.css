@@ -115,6 +115,37 @@ textarea, input { font-size: 16px; }
 .fadehint { animation: fh 2.6s ease forwards; }
 @keyframes fh { 0% { opacity: 0; } 20% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
 
+.twk { animation-name: twk; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+@keyframes twk { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+.mglow { animation: mg 8s ease-in-out infinite; }
+@keyframes mg { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+.softin { animation: softin 1.4s cubic-bezier(0.25, 0.1, 0.25, 1) both; }
+.softin2 { animation: softin 1.6s cubic-bezier(0.25, 0.1, 0.25, 1) .9s both; }
+@keyframes softin { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+.tabin { animation: tabin .75s cubic-bezier(0.22, 0.61, 0.36, 1) .05s backwards; }
+@keyframes tabin { 0% { opacity: 0; transform: translateY(12px); } 100% { opacity: 1; transform: translateY(0); } }
+.orb { animation: orb 5s ease-in-out infinite; }
+@keyframes orb { 0%, 100% { transform: scale(.9); opacity: .7; } 50% { transform: scale(1.15); opacity: 1; } }
+.aurora { animation: aur 9s ease-in-out infinite; }
+.aurora2 { animation: aur 11s ease-in-out infinite reverse; }
+@keyframes aur { 0%, 100% { transform: translate(0, 0) scale(1); opacity: .85; } 50% { transform: translate(24px, 14px) scale(1.12); opacity: 1; } }
+.breathe { animation: brz 7s ease-in-out infinite; }
+@keyframes brz { 0%, 100% { transform: scale(.9); opacity: .55; } 50% { transform: scale(1.08); opacity: 1; } }
+.stagein { animation: stagein 1s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+@keyframes stagein { 0% { opacity: 0; transform: translateY(16px) scale(.985); filter: blur(6px); } 100% { opacity: 1; transform: none; filter: blur(0); } }
+.starfall { animation: sfall 2.6s ease-in infinite; }
+@keyframes sfall { 0% { transform: translateY(-60px) scale(.6); opacity: 0; } 20% { opacity: 1; } 75% { transform: translateY(-8px) scale(1); opacity: 1; } 100% { transform: translateY(0) scale(.4); opacity: 0; } }
+.navpulse { animation: navp 2.6s ease-in-out infinite; }
+@keyframes navp { 0%, 100% { box-shadow: 0 0 0 0 rgba(201,182,228,0); } 50% { box-shadow: 0 0 18px 2px rgba(201,182,228,0.55); } }
+.nudge { animation: nudge 1.8s ease-in-out 1s 2; }
+@keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
+.scroller::-webkit-scrollbar { display: none; }
+.jump.night[aria-pressed='true'] { background: #3A2C58; color: #F4EEFF; border-color: #3A2C58; }
+
+@media (prefers-reduced-motion: reduce) {
+  .twk, .mglow, .softin, .softin2, .tabin, .orb, .aurora, .aurora2, .breathe, .stagein, .starfall, .navpulse, .nudge { animation: none; }
+  .starfall { opacity: 0; }
+}
 @media (prefers-reduced-motion: reduce) {
   .recbreath, .flickA, .breath, .thinkdot { animation: none; }
   .hintfinger, .hintglow { animation: none; opacity: 0; }

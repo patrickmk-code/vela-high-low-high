@@ -30,16 +30,35 @@ export interface Upcoming {
 
 export interface PatternItem {
   name: string;
+  count?: number;
   frequency: string;
   when: string;
   description: string;
   quotes: string[];
 }
 
+export interface PatternQuestion {
+  src: 'highs' | 'lows' | 'filo';
+  theme: string;
+  q: string;
+  why: string;
+}
+
 export interface Patterns {
   sources: PatternItem[];
   drains: PatternItem[];
   ideas: string[];
+  mirror?: string;
+  questions?: PatternQuestion[];
+}
+
+export interface Reflection {
+  id: string;
+  date: string;
+  k: string;
+  c: string;
+  q: string;
+  a: string;
 }
 
 export interface Settings {
@@ -59,6 +78,13 @@ export interface AppData {
   upcoming: Upcoming[];
   ideas: { on: Record<string, boolean>; hidden: Record<string, boolean> };
   patterns: { signature: string; result: Patterns; at: number } | null;
+  /** Eigene Ergänzungen zur Energiekarte */
+  energy: { s: string[]; d: string[] };
+  /** Introspección: Antworten und Fortschritt je Tag */
+  reflections: Reflection[];
+  inward: { seen: boolean; date: string; done: number; theme: string };
+  /** In Patrones gemerkte Frage für die Nacht */
+  savedQuestion: string | null;
 }
 
 const KEY = 'vela.datos.v1';
@@ -66,12 +92,16 @@ const KEY = 'vela.datos.v1';
 export function emptyData(): AppData {
   return {
     version: 1,
-    settings: { onboarded: false, remindAsked: false, remindOn: false, remindTime: '21:30', breathSeconds: 5, prefer: 'voz' },
+    settings: { onboarded: false, remindAsked: false, remindOn: false, remindTime: '21:30', breathSeconds: 8, prefer: 'voz' },
     days: {},
     special: {},
     upcoming: [],
     ideas: { on: {}, hidden: {} },
     patterns: null,
+    energy: { s: [], d: [] },
+    reflections: [],
+    inward: { seen: false, date: '', done: 0, theme: 'todo' },
+    savedQuestion: null,
   };
 }
 
@@ -86,6 +116,9 @@ export function loadData(): AppData {
       ...parsed,
       settings: { ...base.settings, ...(parsed.settings || {}) },
       ideas: { ...base.ideas, ...(parsed.ideas || {}) },
+      energy: { ...base.energy, ...(parsed.energy || {}) },
+      inward: { ...base.inward, ...(parsed.inward || {}) },
+      reflections: parsed.reflections || [],
     } as AppData;
   } catch {
     return emptyData();
@@ -150,6 +183,10 @@ const SAMPLE: [string, string, string, string][] = [
   ['Cociné algo nuevo con calma', 'Tres reuniones seguidas', 'Bloquear un rato solo para mí', 'Plan con amigos el viernes'],
   ['Un paseo al sol a mediodía', 'Prisas con un encargo urgente', 'Decir que no a algo', 'Concierto con Ana'],
   ['Risas con mi hermana por teléfono', 'Dormí mal otra vez', 'Apagar el móvil antes', 'Mañana libre'],
+  ['Concierto con Ana', 'Lunes con prisas desde temprano', 'Una pausa corta fuera', 'Fin de semana en la sierra'],
+  ['Caminar sin rumbo por el barrio', 'Demasiado tiempo con pantallas', 'Leer antes de dormir', 'Cena con amigos el sábado'],
+  ['Comida con la familia', 'Cansancio después del trabajo', 'Acostarme antes', 'Un plan tranquilo el domingo'],
+  ['Música de camino a casa', 'Una reunión que se alargó', 'Decir que no a algo', 'Café con Lucía mañana'],
 ];
 
 export function withSampleData(d: AppData): AppData {
