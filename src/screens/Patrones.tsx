@@ -37,7 +37,7 @@ export function Patrones() {
     if (patterns) {
       const map = (arr: PatternItem[], k: 's' | 'd'): EnergyItem[] => arr.slice(0, 4).map((p) => {
         const c = p.count ?? p.quotes.length;
-        return [p.name, c, `Aparece en ${c} de tus ${n} ${k === 's' ? 'highs' : 'lows'}.`, p.when || p.description, k];
+        return [p.name, c, p.frequency || (k === 's' ? 'Te da energía' : 'Te pesa'), `${p.when ? p.when + ' · ' : ''}Aparece en ${c} de tus ${n} ${k === 's' ? 'highs' : 'lows'}.`, k];
       });
       return [...map(patterns.sources, 's'), ...map(patterns.drains, 'd')];
     }
@@ -48,7 +48,7 @@ export function Patrones() {
   })();
 
   const supportBtn = (
-    <button type="button" onClick={() => update({ supOpen: true })} style={sx('height: 32px; padding: 0 12px; border-radius: 16px; background: rgba(159,180,200,0.12); border: 1px solid rgba(159,180,200,0.25); color: #C9D6E2; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer; font-family: inherit; flex-shrink: 0')}>
+    <button type="button" onClick={() => update({ supOpen: true })} style={sx('height: 36px; padding: 0 14px; border-radius: 16px; background: rgba(159,180,200,0.12); border: 1px solid rgba(159,180,200,0.25); color: #C9D6E2; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer; font-family: inherit; flex-shrink: 0')}>
       <Icon name="heart-linear" size={14} />Apoyo
     </button>
   );
@@ -221,14 +221,14 @@ export function Patrones() {
     </div>
   );
   const energyDraft = vcard('gold', (
-    <>
-      <p style={sx(H1 + '; font-size: 22px')}>Tu energía · borrador</p>
+    <div style={sx('display: flex; flex-direction: column; gap: 7px; height: 100%')}>
+      <p style={sx(H1 + '; font-size: 22px; margin-bottom: 2px')}>Tu energía · borrador</p>
       <p style={sx('margin: 0; font-size: 12px; font-weight: 700; color: #F6D49A')}>Te da energía</p>
       {give.length ? give.map((w, i) => barRow(w, i, '#F2B45A')) : <span style={sx('font-size: 14px; color: #9C8F86')}>Aún nada</span>}
       <p style={sx('margin: 0; font-size: 12px; font-weight: 700; color: #C9D6E2')}>Te la quita</p>
       {take.length ? take.map((w, i) => barRow(w, i, '#9FB4C8')) : <span style={sx('font-size: 14px; color: #9C8F86')}>Aún nada</span>}
       <p style={sx('margin: auto 0 0; font-size: 12px; color: #9C8F86')}>Aún es pronto. Lo afino con {7 - N} {7 - N === 1 ? 'noche' : 'noches'} más.</p>
-    </>
+    </div>
   ));
 
   // ---------- Introspección-Teaser, Leiste und Camino ----------
@@ -303,7 +303,7 @@ export function Patrones() {
                   <p style={sx(`margin: 1px 0 0; font-size: 16px; font-weight: 700; color: ${done || next ? '#F5EFE4' : '#9C8F86'}`)}>{s.t}</p>
                   <p style={sx('margin: 2px 0 0; font-size: 13px; color: #9C8F86; white-space: nowrap; overflow: hidden; text-overflow: ellipsis')}>{s.s}</p>
                 </div>
-                <span style={sx(`flex-shrink: 0; font-size: 12px; font-weight: 700; color: ${done ? '#F6E3C0' : next ? '#E9DCFA' : '#7F736C'}`)}>
+                <span style={sx(`flex-shrink: 0; font-size: 12px; font-weight: 700; color: ${done ? '#F6E3C0' : next ? '#E9DCFA' : '#9C8F86'}`)}>
                   {done ? 'Listo' : N === 0 && s.n === 1 ? 'Esta noche' : `en ${s.n - N} ${s.n - N === 1 ? 'noche' : 'noches'}`}
                 </span>
               </div>
@@ -358,16 +358,19 @@ export function Patrones() {
       const all = [...S, ...D];
       const sel = all[Math.min(ui.patSel, all.length - 1)];
       const max = Math.max(1, ...all.map((e) => e[1]));
-      const slots = [[20, 42], [78, 116], [17, 139], [92, 30]];
+      // 2×2-Raster je Seite (Zellen 70 px), versetzt – Blasen überlappen nie
+      const slots = [[6, 24], [80, 54], [6, 118], [80, 140]];
       const bubble = (e: EnergyItem, i: number, j: number) => {
-        const size = Math.round(48 + (e[1] / max) * 30);
+        const longest = Math.max(...e[0].split(' ').map((w) => w.length));
+        const size = Math.min(68, Math.max(Math.round(46 + (e[1] / max) * 22), longest * 6 + 14));
         const [x, y] = slots[j];
-        const left = e[4] === 's' ? x : 314 - x - size;
+        const cell = x + (68 - size) / 2;
+        const left = e[4] === 's' ? cell : 314 - cell - size;
         const on = sel === e;
         const c = e[4] === 's' ? '242,180,90' : '159,180,200';
         return (
           <button key={e[0] + i} type="button" aria-label={e[0]} aria-pressed={on} onClick={() => update({ patSel: i })}
-            style={sx(`position: absolute; left: ${left}px; top: ${y}px; width: ${size}px; height: ${size}px; border-radius: 50%; padding: 0; border: 1px solid rgba(${c},0.55); background: radial-gradient(circle at 38% 32%, rgba(${c},0.45) 0%, rgba(${c},0.18) 60%, rgba(0,0,0,0) 100%); box-shadow: ${on ? `0 0 0 2px ${e[4] === 's' ? '#F6D49A' : '#C9D6E2'}, 0 0 22px rgba(${c},0.6)` : `0 0 12px rgba(${c},0.25)`}; color: #FBF3E6; font-family: inherit; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.1; cursor: pointer; transition: box-shadow .4s ease, transform .4s ease; transform: scale(${on ? 1.06 : 1}); overflow: hidden`)}>
+            style={sx(`position: absolute; left: ${left}px; top: ${y}px; width: ${size}px; height: ${size}px; border-radius: 50%; padding: 0; border: 1px solid rgba(${c},0.55); background: radial-gradient(circle at 38% 32%, rgba(${c},0.45) 0%, rgba(${c},0.18) 60%, rgba(0,0,0,0) 100%); box-shadow: ${on ? `0 0 0 2px ${e[4] === 's' ? '#F6D49A' : '#C9D6E2'}, 0 0 22px rgba(${c},0.6)` : `0 0 12px rgba(${c},0.25)`}; color: #FBF3E6; font-family: inherit; font-size: ${longest > 9 ? 10 : 11}px; font-weight: 700; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.1; cursor: pointer; transition: box-shadow .4s ease, transform .4s ease; transform: scale(${on ? 1.06 : 1}); overflow: hidden; padding: 0 3px`)}>
             {e[0]}
           </button>
         );
@@ -416,7 +419,7 @@ export function Patrones() {
             <div style={sx(CARD)}><p style={sx('margin: 0; font-size: 15px; color: #CDBFAE')}>Aún no hay suficiente. Vuelve tras unas noches más.</p></div>
           ) : (
             <div style={sx(`${GLASS}; padding: 18px; border-radius: 24px`)}>
-              <div style={sx('position: relative; width: 314px; height: 210px; margin: 0 auto')}>
+              <div style={sx('position: relative; width: 314px; height: 214px; margin: 0 auto')}>
                 <span aria-hidden="true" style={sx('position: absolute; left: 157px; top: 28px; width: 1px; height: 176px; background: linear-gradient(to bottom, rgba(245,239,228,0), rgba(245,239,228,0.14), rgba(245,239,228,0))')} />
                 <span style={sx('position: absolute; left: 0; top: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #F6D49A')}>Te llena</span>
                 <span style={sx('position: absolute; right: 0; top: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #C9D6E2')}>Te pesa</span>
@@ -429,7 +432,7 @@ export function Patrones() {
                   <div><p style={sx("margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 19px; line-height: 1.3")}>{sel[0]} · {sel[2]}</p>{sel[3] && <p style={sx('margin: 3px 0 0; font-size: 13px; line-height: 1.45; color: #9C8F86')}>{sel[3]}</p>}</div>
                 </div>
               )}
-              <p style={sx('margin: 10px 0 0; font-size: 12px; color: #7F736C')}>Toca una burbuja. Cuanto más grande, más se repite.</p>
+              <p style={sx('margin: 10px 0 0; font-size: 12px; color: #9C8F86')}>Toca una burbuja. Cuanto más grande, más se repite.</p>
             </div>
           )}
           {addRow('s')}
@@ -532,6 +535,13 @@ export function Patrones() {
   return (
     <TabPage>
       {head}
+      {!demo && N === 0 && (
+        <div style={sx(CARD + '; border: 1px solid rgba(230,205,163,0.3)')}>
+          <p style={sx("margin: 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 21px; line-height: 1.35")}>Aquí crecerá tu espejo, noche a noche.</p>
+          <p style={sx('margin: 0; font-size: 15px; line-height: 1.5; color: #CDBFAE')}>Tu primera noche empieza en «Hoy». Después de cada noche, verás aparecer algo nuevo aquí.</p>
+          <button type="button" onClick={() => tabGo('home')} style={sx('align-self: flex-start; height: 44px; padding: 0 20px; border-radius: 22px; border: none; background: #E6CDA3; color: #2B2430; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit')}>Ir a Hoy</button>
+        </div>
+      )}
       {N < 3 && (
         <>
           {carousel('Qué verás, noche a noche', roadmapCards)}
@@ -554,7 +564,7 @@ export function Patrones() {
               <Twinkles n={10} w={330} h={140} seed={9} />
               <p style={sx('position: relative; margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #F6E3C0')}>Tu primer espejo · 2 semanas</p>
               <p style={sx('position: relative; margin: 10px 0 0; ' + ITALIC.replace('margin: 0; ', '') + '; font-size: 21px; line-height: 1.4')}>“{mirrorText}”</p>
-              <button type="button" onClick={() => speak(mirrorText)} style={sx('position: relative; margin-top: 14px; padding: 0; border: none; background: transparent; display: flex; align-items: center; gap: 8px; color: #E6CDA3; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit')}>
+              <button type="button" onClick={() => speak(mirrorText)} style={sx('position: relative; margin-top: 6px; min-height: 44px; padding: 0; border: none; background: transparent; display: flex; align-items: center; gap: 8px; color: #E6CDA3; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit')}>
                 <Icon name="soundwave-linear" size={18} />{ui.speaking ? 'Escuchando … toca para parar' : 'Escúchalo con calma'}
               </button>
             </div>
@@ -585,7 +595,7 @@ export function Patrones() {
       {camino}
       {introBar}
       {!demo && N > 0 && (
-        <p style={sx('margin: 0; font-size: 12px; color: #7F736C; text-align: center')}>Última noche: {entries.length ? relLabel(entries[entries.length - 1].date, today) : '—'}</p>
+        <p style={sx('margin: 0; font-size: 12px; color: #9C8F86; text-align: center')}>Última noche: {entries.length ? relLabel(entries[entries.length - 1].date, today) : '—'}</p>
       )}
     </TabPage>
   );

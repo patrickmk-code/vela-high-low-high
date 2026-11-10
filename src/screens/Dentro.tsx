@@ -1,5 +1,5 @@
 // Tab „Dentro“ – Introspección (ab 14 Nächten), Prototipo v1 Abschnitt 11. Plus Bottom-Sheet „Apoyo“.
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../ctx';
 import { sx } from '../sx';
 import { Icon } from '../Icon';
@@ -67,7 +67,7 @@ export function Dentro() {
             <div role="img" aria-label={`Pregunta ${ui.inQ + 1} de 3`} style={sx('display: flex; gap: 8px')}>
               {[0, 1, 2].map((k) => <span key={k} style={sx(`width: ${k === ui.inQ ? 28 : 10}px; height: 6px; border-radius: 3px; background: ${k <= ui.inQ ? '#E9DCFA' : 'rgba(245,239,228,0.18)'}; box-shadow: ${k === ui.inQ ? '0 0 10px rgba(201,182,228,0.8)' : 'none'}; transition: all .6s ease`)} />)}
             </div>
-            <button type="button" onClick={() => next(true)} style={sx('height: 36px; padding: 0 6px; border: none; background: transparent; color: #9C8F86; font-size: 13px; cursor: pointer; font-family: inherit')}>Saltar</button>
+            <button type="button" onClick={() => next(true)} style={sx('height: 44px; padding: 0 8px; border: none; background: transparent; color: #9C8F86; font-size: 14px; cursor: pointer; font-family: inherit')}>Saltar</button>
           </div>
           <div key={'q' + ui.inQ} className="stagein" style={sx('display: flex; flex-direction: column; gap: 16px; min-height: 0')}>
             <div style={sx(`${GLASS}; position: relative; overflow: hidden; padding: 26px 22px; border-radius: 28px; background: linear-gradient(165deg, ${q.tint} 0%, rgba(245,239,228,0.04) 75%); border: 1px solid rgba(245,239,228,0.12); min-height: 260px; display: flex; flex-direction: column; gap: 16px`)}>
@@ -81,7 +81,7 @@ export function Dentro() {
           </div>
         </div>
         <div style={sx('position: absolute; left: 20px; right: 20px; bottom: 40px; display: flex; gap: 10px; align-items: center')}>
-          <MicButton onText={(t) => update((s) => ({ inAns: (s.inAns ? s.inAns.trimEnd() + ' ' : '') + t }))} />
+          <MicButton key={'mic' + ui.inQ} onText={(t) => update((s) => ({ inAns: (s.inAns ? s.inAns.trimEnd() + ' ' : '') + t }))} />
           <button type="button" onClick={() => next(false)} style={sx('flex-grow: 1; height: 52px; border-radius: 26px; border: none; background: #E6CDA3; color: #2B2430; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit')}>{ui.inQ < 2 ? 'Siguiente' : 'Terminar'}</button>
         </div>
       </>
@@ -124,9 +124,10 @@ export function Dentro() {
   const done = inward.done;
   return (
     <>
-      <div className="stagein" style={sx('position: absolute; left: 28px; right: 28px; top: 96px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px')}>
+      <div className="scroller" style={sx('position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none')}>
+      <div className="stagein" style={sx('padding: 96px 28px 140px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px')}>
         <BigOrb />
-        <p style={sx('margin: 14px 0 0; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #E9DCFA')}>{first ? 'Nuevo · Noche 14' : `Introspección · Día ${nights}`}</p>
+        <p style={sx('margin: 14px 0 0; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #E9DCFA')}>{first ? (nights === 14 ? 'Nuevo · Noche 14' : 'Nuevo · Introspección') : `Introspección · Día ${nights}`}</p>
         <h1 style={sx("margin: -6px 0 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 32px; line-height: 1.18; text-shadow: 0 0 24px rgba(201,182,228,0.5)")}>{first ? 'Bienvenido a la Introspección' : done >= 3 ? 'Por hoy, suficiente' : 'Tu momento para mirar dentro'}</h1>
         <p style={sx('margin: 0; font-size: 16px; line-height: 1.55; color: #DCD0EA')}>{done >= 3 ? 'Has respondido tus tres preguntas de hoy. Mañana te esperan tres nuevas.' : first ? 'Cada día, tres preguntas hechas a partir de tus highs y tus lows. Sin prisa, sin respuestas correctas.' : 'Tres preguntas para hoy. Una a una, a tu ritmo.'}</p>
         <div aria-label="Preguntas de hoy" style={sx('display: flex; gap: 10px; align-items: center')}>
@@ -138,17 +139,18 @@ export function Dentro() {
             <div style={sx('display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 2px')}>
               {INTH.map((t) => {
                 const on = t.id === theme;
-                return <button key={t.id} type="button" aria-pressed={on} onClick={() => setInward({ theme: t.id })} style={sx(`height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid ${on ? 'rgba(201,182,228,0.6)' : 'rgba(245,239,228,0.12)'}; background: ${on ? 'rgba(201,182,228,0.2)' : 'transparent'}; color: ${on ? '#EDE3F8' : '#9C8F86'}; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .4s ease`)}>{t.label}</button>;
+                return <button key={t.id} type="button" aria-pressed={on} onClick={() => setInward({ theme: t.id })} style={sx(`height: 36px; padding: 0 13px; border-radius: 18px; border: 1px solid ${on ? 'rgba(201,182,228,0.6)' : 'rgba(245,239,228,0.12)'}; background: ${on ? 'rgba(201,182,228,0.2)' : 'transparent'}; color: ${on ? '#EDE3F8' : '#9C8F86'}; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .4s ease`)}>{t.label}</button>;
               })}
             </div>
           </>
         )}
-      </div>
-      <button type="button" onClick={() => update({ inStage: 'refl' })} style={sx(`${GLASS}; position: absolute; left: 20px; right: 20px; bottom: 112px; padding: 14px 16px; border-radius: 20px; display: flex; align-items: center; gap: 12px; color: #F5EFE4; text-align: left; cursor: pointer; font-family: inherit`)}>
+      <button type="button" onClick={() => update({ inStage: 'refl' })} style={sx(`${GLASS}; align-self: stretch; margin-top: 18px; padding: 14px 16px; border-radius: 20px; display: flex; align-items: center; gap: 12px; color: #F5EFE4; text-align: left; cursor: pointer; font-family: inherit`)}>
         <span aria-hidden="true" style={sx('width: 40px; height: 40px; border-radius: 20px; flex-shrink: 0; background: rgba(201,182,228,0.14); color: #DCCDF0; display: flex; align-items: center; justify-content: center')}><Icon name="notebook-linear" size={20} /></span>
         <span style={sx('display: flex; flex-direction: column; gap: 2px; flex-grow: 1')}><span style={sx('font-size: 15px; font-weight: 700')}>Tus reflexiones</span><span style={sx('font-size: 13px; color: #CDBFAE')}>{data.reflections.length ? `${data.reflections.length} ${data.reflections.length === 1 ? 'respuesta guardada' : 'respuestas guardadas'}` : 'Aquí guardo lo que te respondas'}</span></span>
         <span style={sx('color: #9C8F86; display: flex')}><Icon name="alt-arrow-right-linear" size={16} /></span>
       </button>
+      </div>
+      </div>
     </>
   );
 }
@@ -157,6 +159,8 @@ export function Dentro() {
 function MicButton({ onText }: { onText: (t: string) => void }) {
   const [rec, setRec] = useState(false);
   const cap = useRef<VoiceCapture | null>(null);
+  // Beim Verlassen der Frage (Saltar, Siguiente, Tab-Wechsel) Mikrofon sofort freigeben
+  useEffect(() => () => { cap.current?.cancel(); cap.current = null; }, []);
   if (!sttSupported()) return null;
   const toggle = async () => {
     if (rec && cap.current) {

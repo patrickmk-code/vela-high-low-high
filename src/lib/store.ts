@@ -87,7 +87,9 @@ export interface AppData {
   savedQuestion: string | null;
 }
 
-const KEY = 'vela.datos.v1';
+export const KEY = 'vela.datos.v1';
+/** Testmodus (?noches, ?modo=recurrente): eigener Speicher, berührt die echten Daten nie */
+export const DEMO_KEY = 'vela.prueba.v1';
 
 export function emptyData(): AppData {
   return {
@@ -105,10 +107,14 @@ export function emptyData(): AppData {
   };
 }
 
-export function loadData(): AppData {
+export function loadData(key: string = KEY): AppData {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return emptyData();
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      const d = emptyData();
+      if (key === DEMO_KEY) d.settings = { ...d.settings, onboarded: true };
+      return d;
+    }
     const parsed = JSON.parse(raw) as Partial<AppData>;
     const base = emptyData();
     return {
@@ -125,17 +131,17 @@ export function loadData(): AppData {
   }
 }
 
-export function saveData(d: AppData): boolean {
+export function saveData(d: AppData, key: string = KEY): boolean {
   try {
-    localStorage.setItem(KEY, JSON.stringify(d));
+    localStorage.setItem(key, JSON.stringify(d));
     return true;
   } catch {
     return false;
   }
 }
 
-export function clearData() {
-  try { localStorage.removeItem(KEY); } catch { /* egal */ }
+export function clearData(key: string = KEY) {
+  try { localStorage.removeItem(key); } catch { /* egal */ }
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);

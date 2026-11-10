@@ -6,7 +6,7 @@ import { useLayout } from './useLayout';
 import { COOL, F, GOLD, IN, JUMPS_FIRST, JUMPS_RECURRING, NIGHT_STEPS, SPOTIFY_URL, SUGG, isInputPhase, type InputPhase, type Phase } from './data';
 import { addDays, cap, keyOf, longLabel, parseKey, todayKey } from './lib/dates';
 import {
-  clearData, completedCount, emptyData, emptyDay, entriesForAnalysis, loadData, patternSignature, saveData, uid,
+  DEMO_KEY, KEY, clearData, completedCount, emptyData, emptyDay, entriesForAnalysis, loadData, patternSignature, saveData, uid,
   type AppData, type DayEntry, type Moment, type Via,
 } from './lib/store';
 import { clearAudio, deleteAudio, playAudio, saveAudio, stopAudio } from './lib/audio';
@@ -30,6 +30,7 @@ const URL_NOCHES = (() => {
   return Number.isFinite(n) && n >= 0 && n <= 60 ? Math.round(n) : null;
 })();
 const TEST = params.has('prueba') || RECURRING_DEMO || URL_NOCHES != null;
+const START_DEMO = URL_NOCHES != null || RECURRING_DEMO;
 const URL_BREATH = (() => {
   const n = Number(params.get('respira'));
   return Number.isFinite(n) && n >= 1 && n <= 30 ? n : null;
@@ -83,7 +84,7 @@ const INPUT = "height: 40px; padding: 0 14px; border-radius: 20px; border: 1px s
 
 export default function App() {
   const layout = useLayout();
-  const [data, setDataRaw] = useState<AppData>(loadData);
+  const [data, setDataRaw] = useState<AppData>(() => loadData(START_DEMO ? DEMO_KEY : KEY));
   const [st, setSt] = useState<UI>(() => blankUI(data));
   const [sheetOpen, setSheetOpen] = useState(false);
   const [, setTick] = useState(0);
@@ -109,10 +110,20 @@ export default function App() {
   const toast = useCallback((msg: string) => update({ toast: msg }), [update]);
 
   // ---------- Speichern ----------
+  const storeKey = st.demoNights != null ? DEMO_KEY : KEY;
+  const storeKeyRef = useRef(storeKey);
   useEffect(() => {
     if (firstSave.current) { firstSave.current = false; return; }
-    if (!saveData(data)) update({ toast: 'No se pudo guardar en este dispositivo.' });
-  }, [data, update]);
+    if (storeKeyRef.current !== storeKey) return; // gerade gewechselt – nicht in den falschen Speicher schreiben
+    if (!saveData(data, storeKey)) update({ toast: 'No se pudo guardar en este dispositivo.' });
+  }, [data, storeKey, update]);
+  // Wechsel echt ↔ Test: jeweils eigenen Speicher laden
+  useEffect(() => {
+    if (storeKeyRef.current === storeKey) return;
+    storeKeyRef.current = storeKey;
+    committed.current = { ...NO_ANSWERS };
+    setDataRaw(loadData(storeKey));
+  }, [storeKey]);
   useEffect(() => {
     if (!st.toast) return;
     const t = window.setTimeout(() => update({ toast: null }), 3200);
@@ -230,7 +241,7 @@ export default function App() {
       update({ prog: progRef.current });
     }, 40);
   };
-  const homeDone = (s: UI) => s.phase === 'home' && !!dataRef.current.days[todayKey()]?.done && !s.relight && s.demoNights == null;
+  const homeDone = (s: UI) => s.phase === 'home' && !!dataRef.current.days[todayKey()]?.done && !s.relight;
   const holdDown = () => {
     const s = stRef.current;
     if (homeDone(s) || s.leaving || (s.phase !== 'home' && s.phase !== 'lighting')) return;
@@ -328,9 +339,14 @@ export default function App() {
   const setNights = (n: number) => {
     setSheetOpen(false);
     update((s) => ({ demoNights: n, patIdx: 0, patOpen: -1, patSel: 0, inStage: 'home', phase: n < 14 && s.phase === 'inward' ? 'patterns' : s.phase }));
-    setDataRaw((d) => ({ ...d, inward: { ...d.inward, done: 0, date: '' } }));
+    if (stRef.current.demoNights != null) setDataRaw((d) => ({ ...d, inward: { ...d.inward, done: 0, date: '', seen: false } }));
+    else { saveData(dataRef.current, KEY); const dd = loadData(DEMO_KEY); setDataRaw({ ...dd, inward: { ...dd.inward, done: 0, date: '', seen: false } }); storeKeyRef.current = DEMO_KEY; }
   };
-  const reset = () => { clearAll(); committed.current = { ...NO_ANSWERS }; setSt(blankUI(dataRef.current)); };
+  const reset = () => {
+    clearAll(); committed.current = { ...NO_ANSWERS };
+    if (stRef.current.demoNights != null) { clearData(DEMO_KEY); const fresh = loadData(DEMO_KEY); setDataRaw(fresh); setSt({ ...blankUI(fresh), demoNights: stRef.current.demoNights }); }
+    else setSt(blankUI(dataRef.current));
+  };
   const blowOut = () => {
     go('sleep');
     vibrate([20, 60, 30]);
@@ -342,7 +358,7 @@ export default function App() {
   };
   const exportData = () => downloadFile(`vela-${todayKey()}.json`, JSON.stringify(dataRef.current, null, 2), 'application/json');
   const deleteAll = async () => {
-    clearAll(); clearData(); await clearAudio();
+    clearAll(); clearData(KEY); clearData(DEMO_KEY); await clearAudio();
     const fresh = emptyData();
     committed.current = { ...NO_ANSWERS };
     setDataRaw(fresh);
@@ -377,7 +393,7 @@ export default function App() {
   const inputPh: InputPhase | null = isInputPhase(ph) ? ph : null;
   const isHome = ph === 'home';
   const isTab = ph === 'highs' || ph === 'patterns' || ph === 'review' || ph === 'inward' || ph === 'settings';
-  const isDone = isHome && !!todayEntry?.done && !st.relight && !demo;
+  const isDone = isHome && !!todayEntry?.done && !st.relight;
   let f = F[ph] ?? F.home!;
   if (isDone) f = F.sleep!;
   let [scale, , halo, warmHalo] = f;
@@ -398,7 +414,9 @@ export default function App() {
   let early = ph === 'intro' || (isHome && !isDone) || ph === 'lighting' || ph === 'lit';
   if (isTab) early = !isDone;
   const bigPh = ph === 'stay' || ph === 'journal' || ph === 'blow' || ph === 'sleep';
-  const CT: [number, number] = early ? [150, 0.75] : bigPh ? [180, 1.3] : ph === 'now' ? [318, 1] : ph === 'mirror' || isDone ? [360, 0.55] : [280, 0.6];
+  const short = layout.H < 760;
+  const CT: [number, number] = early ? [150, 0.75] : bigPh ? [180, 1.3] : ph === 'now' ? [318, 1] : ph === 'mirror' || isDone ? [360, 0.55]
+    : ph === 'remind' && short ? [280, 0.45] : short ? [240, 0.5] : [280, 0.6];
   const glowY = early ? 41 : bigPh ? 62 : ph === 'now' ? 68 : ph === 'mirror' || isDone ? 58 : 51;
   const showC = !isTab && ph !== 'lock';
   const showNav = isHome || ph === 'highs' || ph === 'patterns' || ph === 'review' || (ph === 'inward' && (st.inStage === 'home' || st.inStage === 'refl'));
@@ -642,7 +660,7 @@ export default function App() {
           {ph === 'lock' && (
             <>
               <div style={sx('position: absolute; left: 0; right: 0; top: 96px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #F5EFE4')}>
-                <p style={sx('margin: 0; font-size: 16px; font-weight: 600; color: #E6DACB')}>{longLabel(keyOf(headDate))}</p>
+                <p style={sx('margin: 0; font-size: 16px; font-weight: 600; color: #E6DACB')}>{cap(longLabel(keyOf(headDate)))}</p>
                 <p style={sx('margin: 0; font-size: 84px; font-weight: 300; line-height: 1; letter-spacing: -0.02em')}>{demo ? '21:30' : `${headDate.getHours()}:${pad(headDate.getMinutes())}`}</p>
               </div>
               <button type="button" onClick={() => go('home')} aria-label="Abrir notificación de Vela" style={sx(`position: absolute; left: 14px; right: 14px; top: ${T(300)}px; padding: 14px 16px; border-radius: 22px; border: 1px solid rgba(245,239,228,0.12); background: rgba(245,239,228,0.1); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); color: #F5EFE4; display: flex; gap: 12px; align-items: flex-start; text-align: left; cursor: pointer; font-family: inherit`)}>
@@ -702,7 +720,7 @@ export default function App() {
 
           {isHome && !isDone && !st.leaving && (
             <div className="tabin" style={sx(`position: absolute; left: 32px; right: 32px; top: ${T(550)}px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 18px; pointer-events: none`)}>
-              <h1 style={sx(H1 + '; font-size: 30px; line-height: 1.22')}>{todayEntry?.done && !demo ? 'Aquí sigo, si quieres más.' : 'Qué bien que estés aquí.'}</h1>
+              <h1 style={sx(H1 + '; font-size: 30px; line-height: 1.22')}>{todayEntry?.done ? 'Aquí sigo, si quieres más.' : 'Qué bien que estés aquí.'}</h1>
               <p style={sx('margin: -8px 0 0; font-size: 17px; line-height: 1.5; color: #CDBFAE')}>¿Cómo ha ido tu día?</p>
               {!(five && !data.inward.seen && H < 800) && <p style={sx('margin: 0; padding: 8px 16px; border-radius: 16px; background: rgba(245,239,228,0.07); font-size: 14px; color: #E6DACB')}>Deja el dedo en la pantalla</p>}
             </div>
@@ -830,7 +848,7 @@ export default function App() {
         {/* Hinweis ab 14 Nächten: Introspección (Stern fällt zum Dentro-Punkt) */}
         {isHome && !isDone && five && !st.leaving && !data.inward.seen && (
           <>
-            <span aria-hidden="true" className="starfall" style={sx(`position: absolute; left: ${W / 2 + 126}px; top: ${H - 110}px; width: 6px; height: 6px; border-radius: 3px; z-index: 8; background: #F4EEFF; box-shadow: 0 0 10px 3px rgba(220,205,245,0.9); pointer-events: none`)} />
+            <span aria-hidden="true" className="starfall" style={sx(`position: absolute; left: ${W / 2 + 126}px; top: ${H - 88}px; width: 6px; height: 6px; border-radius: 3px; z-index: 8; background: #F4EEFF; box-shadow: 0 0 10px 3px rgba(220,205,245,0.9); pointer-events: none`)} />
             <button type="button" onClick={() => tabGo('inward')} className="softin" style={sx(`position: absolute; right: ${colLeft + 18}px; bottom: 116px; z-index: 6; height: 38px; padding: 0 14px 0 10px; border-radius: 19px; border: 1px solid rgba(201,182,228,0.45); background: rgba(58,44,88,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #F4EEFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit; white-space: nowrap; box-shadow: 0 0 20px -4px rgba(201,182,228,0.6)`)}>
               <span aria-hidden="true" className="orb" style={sx('width: 8px; height: 8px; border-radius: 4px; background: #EDE3F8; box-shadow: 0 0 8px 2px rgba(201,182,228,0.8)')} />Nuevo · Introspección, aquí abajo
             </button>
@@ -850,13 +868,14 @@ export default function App() {
 
         {st.supOpen && <SupportSheet onClose={() => update({ supOpen: false })} />}
 
-        {st.toast && <div role="status" style={sx('position: absolute; left: 20px; right: 20px; top: 104px; z-index: 10; padding: 12px 16px; border-radius: 16px; background: rgba(46,39,56,0.97); border: 1px solid rgba(245,239,228,0.12); color: #F5EFE4; font-size: 14px; line-height: 1.45; text-align: center; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.6)')}>{st.toast}</div>}
+        {st.toast && <div role="status" style={sx('position: absolute; left: 20px; right: 20px; bottom: 120px; z-index: 10; padding: 12px 16px; border-radius: 16px; background: rgba(46,39,56,0.97); border: 1px solid rgba(245,239,228,0.12); color: #F5EFE4; font-size: 14px; line-height: 1.45; text-align: center; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.6)')}>{st.toast}</div>}
 
         {TEST && ph !== 'intro' && (
           <button type="button" aria-label="Reiniciar prototipo" title="Reiniciar prototipo" onClick={reset} style={sx('position: absolute; left: 8px; top: 6px; z-index: 8; width: 40px; height: 40px; border-radius: 22px; border: none; background: transparent; color: rgba(245,239,228,0.45); display: flex; align-items: center; justify-content: center; cursor: pointer')}>
             <Icon name="restart-linear" size={18} />
           </button>
         )}
+        {demo && !mobile && <span style={sx('position: absolute; right: 14px; top: 12px; z-index: 8; padding: 3px 8px; border-radius: 10px; background: rgba(201,182,228,0.16); color: #E9DCFA; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; pointer-events: none')}>Prueba</span>}
         {mobile && TEST && (
           <button type="button" onClick={() => setSheetOpen(true)} aria-haspopup="dialog" aria-label="Pantallas de prueba" style={sx('position: absolute; left: 50%; margin-left: -22px; top: 6px; z-index: 8; width: 44px; height: 32px; border-radius: 16px; border: none; background: rgba(245,239,228,0.07); color: rgba(245,239,228,0.6); display: flex; align-items: center; justify-content: center; cursor: pointer')}>
             <Icon name="hamburger-menu-linear" size={16} />

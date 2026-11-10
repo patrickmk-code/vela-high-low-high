@@ -49,7 +49,7 @@ export function Highs() {
                   <p style={sx('margin: 0; font-size: 15px; font-weight: 600; line-height: 1.35')}>{u.title}</p>
                   <p style={sx('margin: 2px 0 0; font-size: 13px; color: #9C8F86')}>{inDays(u.date, demo ? keyOf(new Date(2026, 10, 9)) : today)}</p>
                 </div>
-                {!demo && <button type="button" aria-label={'Quitar ' + u.title} onClick={() => setData((dd) => ({ ...dd, upcoming: dd.upcoming.filter((x) => x.id !== u.id) }))} style={sx('width: 40px; height: 40px; border: none; background: transparent; color: #7F736C; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0')}><Icon name="close-circle-linear" size={20} /></button>}
+                {!demo && <button type="button" aria-label={'Quitar ' + u.title} onClick={() => setData((dd) => ({ ...dd, upcoming: dd.upcoming.filter((x) => x.id !== u.id) }))} style={sx('width: 40px; height: 40px; border: none; background: transparent; color: #9C8F86; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0')}><Icon name="close-circle-linear" size={20} /></button>}
               </div>
             );
           })}
@@ -104,7 +104,7 @@ export function Highs() {
                 <p style={sx('margin: 0; font-size: 12px; color: #9C8F86')}>{h.d}</p>
                 <p style={sx("margin: 2px 0 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 17px; line-height: 1.35")}>{h.t}</p>
               </div>
-              {h.audio ? playBtn(h.audio, 32) : <span aria-hidden="true" style={sx('color: #5E544E; display: flex; flex-shrink: 0')}><Wave /></span>}
+              {h.audio ? playBtn(h.audio, 32) : <span aria-hidden="true" style={sx('color: #9C8F86; display: flex; flex-shrink: 0')}><Wave /></span>}
             </div>
           ))}
         </div>
@@ -205,6 +205,9 @@ export function Diario() {
           <p style={sx('margin: 0; font-size: 14px; color: #CDBFAE')}>{future ? 'Este día aún no ha llegado.' : selDay === tday ? 'Esta noche aún no has encendido la vela.' : 'Este día no encendiste la vela. Está bien así.'}</p>
         )}
       </div>
+      <button type="button" onClick={() => go('settings')} style={sx(`${GLASS}; min-height: 52px; padding: 0 16px; border-radius: 20px; display: flex; align-items: center; gap: 12px; color: #E6DACB; font-size: 15px; cursor: pointer; font-family: inherit`)}>
+        <Icon name="tuning-2-linear" size={20} /><span style={sx('flex-grow: 1; text-align: left')}>Ajustes y privacidad</span><Icon name="alt-arrow-right-linear" size={16} />
+      </button>
     </TabPage>
   );
 }
