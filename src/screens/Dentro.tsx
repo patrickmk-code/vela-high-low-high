@@ -127,9 +127,9 @@ export function Dentro() {
       <div className="scroller" style={sx('position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none')}>
       <div className="stagein" style={sx('padding: 96px 28px 140px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px')}>
         <BigOrb />
-        <p style={sx('margin: 14px 0 0; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #E9DCFA')}>{first ? (nights === 14 ? 'Nuevo · Noche 14' : 'Nuevo · Introspección') : `Introspección · Día ${nights}`}</p>
+        <p style={sx('margin: 14px 0 0; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #E9DCFA')}>{first ? 'Nuevo · Introspección' : `Introspección · Día ${nights}`}</p>
         <h1 style={sx("margin: -6px 0 0; font-family: 'Fraunces', serif; font-weight: 300; font-size: 32px; line-height: 1.18; text-shadow: 0 0 24px rgba(201,182,228,0.5)")}>{first ? 'Bienvenido a la Introspección' : done >= 3 ? 'Por hoy, suficiente' : 'Tu momento para mirar dentro'}</h1>
-        <p style={sx('margin: 0; font-size: 16px; line-height: 1.55; color: #DCD0EA')}>{done >= 3 ? 'Has respondido tus tres preguntas de hoy. Mañana te esperan tres nuevas.' : first ? 'Cada día, tres preguntas hechas a partir de tus highs y tus lows. Sin prisa, sin respuestas correctas.' : 'Tres preguntas para hoy. Una a una, a tu ritmo.'}</p>
+        <p style={sx('margin: 0; font-size: 16px; line-height: 1.55; color: #DCD0EA')}>{done >= 3 ? 'Has respondido tus tres preguntas de hoy. Mañana te esperan tres nuevas.' : first ? (aiQs.length || demo ? 'Cada día, tres preguntas hechas a partir de tus highs y tus lows. Sin prisa, sin respuestas correctas.' : 'Cada día, tres preguntas para mirar dentro. Con tus noches se irán volviendo más tuyas. Sin prisa, sin respuestas correctas.') : 'Tres preguntas para hoy. Una a una, a tu ritmo.'}</p>
         <div aria-label="Preguntas de hoy" style={sx('display: flex; gap: 10px; align-items: center')}>
           {[0, 1, 2].map((k) => <span key={k} style={sx(`width: 10px; height: 10px; border-radius: 5px; background: ${k < done ? '#EDE3F8' : 'transparent'}; box-shadow: ${k < done ? '0 0 10px rgba(201,182,228,0.9)' : 'none'}; border: 1px solid rgba(237,227,248,0.4)`)} />)}
         </div>

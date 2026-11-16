@@ -338,7 +338,7 @@ export default function App() {
   };
   const setNights = (n: number) => {
     setSheetOpen(false);
-    update((s) => ({ demoNights: n, patIdx: 0, patOpen: -1, patSel: 0, inStage: 'home', phase: n < 14 && s.phase === 'inward' ? 'patterns' : s.phase }));
+    update((s) => ({ demoNights: n, patIdx: 0, patOpen: -1, patSel: 0, inStage: 'home', phase: s.phase }));
     if (stRef.current.demoNights != null) setDataRaw((d) => ({ ...d, inward: { ...d.inward, done: 0, date: '', seen: false } }));
     else { saveData(dataRef.current, KEY); const dd = loadData(DEMO_KEY); setDataRaw({ ...dd, inward: { ...dd.inward, done: 0, date: '', seen: false } }); storeKeyRef.current = DEMO_KEY; }
   };
@@ -648,8 +648,8 @@ export default function App() {
   );
 
   // Navbar-Geometrie (Pille gleitet)
-  const navTabs = TABS.filter((t) => t !== 'inward' || five);
-  const inW = five ? 50 : 56;
+  const navTabs = TABS; // Dentro (Introspección) ab Tag 0 erreichbar
+  const inW = 50;
   const navActive: Phase = ph === 'highs' || ph === 'patterns' || ph === 'review' || ph === 'inward' ? ph : ph === 'settings' ? 'review' : 'home';
   let navX = 6;
   for (const t of navTabs) { if (t === navActive) break; navX += inW + 4; }
